@@ -8,14 +8,10 @@ import torch.nn as nn
 import torch.optim as optim
 
 from DecentSpec.Common.utils import save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
-# TODO use TorchScript to serialize the model class
 from DecentSpec.Common.model import SharedModel
+import DecentSpec.Common.config as CONFIG
 
-# do we need to random send?
-RANDOM_SIM = False
-# ==========================
 
-SEED_ADDR = "http://127.0.0.1:5000"
 LOCAL_DATASET = "DecentSpec/EdgeSim/GPS-power.dat"     # data structure 
 myName = genName()
 print("***** NODE init, I am edge {} *****".format(myName))
@@ -74,7 +70,7 @@ def pushTrained(size, lossDelta, weight, addr):
         'weight' : weight
     }
     global myName
-    if RANDOM_SIM:
+    if CONFIG.RANDOM_EDGE:
         myName = genName()
     data = {
         'author' : myName,
@@ -142,7 +138,7 @@ localFeeder = DataFeeder(LOCAL_DATASET)
 while localFeeder.haveData():
 # full life cycle of one round ==============================
     # miner communication
-    minerList = fetchList(SEED_ADDR)
+    minerList = fetchList(CONFIG.SEED_ADDR)
     modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList[0])
     # model init, should have built according to miner response
     # TODO sharedModel is impossible in real situation
@@ -155,7 +151,7 @@ while localFeeder.haveData():
     # print(myModel.state_dict())
     # send back to server
     addr = minerList[0]
-    if RANDOM_SIM:
+    if CONFIG.RANDOM_EDGE:
         addr = random.choice(minerList)
     pushTrained(size, lossDelta, weight, addr)
 # end of the life cycle =====================================

@@ -6,6 +6,7 @@ import torch
 from hashlib import sha256
 from threading import Lock
 
+import DecentSpec.Common.config as CONFIG
 
 GENESIS_HASH = "genesisHash"
 
@@ -22,7 +23,7 @@ class Intrpt:
         with self.lock:
             self.flag = True
 
-def genName(num=10):
+def genName(num=CONFIG.DEFAULT_NAME_LENGTH):
     salt = ''.join(random.sample(string.ascii_letters + string.digits, num))
     return salt
 

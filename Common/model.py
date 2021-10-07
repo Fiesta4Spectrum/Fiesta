@@ -6,12 +6,12 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-N_LIST = [2,50,50,50,1]
+import DecentSpec.Common.config as CONFIG
 
 class SharedModel(nn.Module):
 
     # parameter-related operation is defined in init as nn
-    def __init__(self, nlist = N_LIST):
+    def __init__(self, nlist = CONFIG.DEFAULT_NN_STRUCTURE):
         super(SharedModel, self).__init__()
         # input of network is a 2-dimensional feature(latitude, longitude)
         self.hidden = nn.ModuleList()

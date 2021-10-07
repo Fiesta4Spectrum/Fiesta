@@ -8,6 +8,7 @@ import threading
 from DecentSpec.Seed.database import MinerDB, RewardDB
 from DecentSpec.Common.model import SharedModel # TODO 
 from DecentSpec.Common.utils import save_weights_into_dict, genName
+import DecentSpec.Common.config as CONFIG
 
 seed = Flask(__name__)
 myport = "5000"
@@ -17,14 +18,10 @@ myName = genName()  # name of this seed server
 print("***** NODE init, I am seed {} *****".format(myName))
 myMembers = MinerDB()
 
-layerStructure = [2,50,50,50,1]
+layerStructure = CONFIG.DEFAULT_NN_STRUCTURE
 seedName = genName()    # name of this seed
 seedModel = SharedModel(layerStructure)
-# preprocPara = {
-#     'x' : [43.07850074790703,0.026930841086101193] ,
-#     'y' : [-89.3982621182465,0.060267757907425355] ,
-#     'z' : [-58.52785514280172,7.434576197607559] ,
-# }
+
 preprocPara = {
     'avg' : [43.07850074790703,-89.3982621182465,-58.52785514280172] ,
     'std' : [0.026930841086101193, 0.060267757907425355,7.434576197607559] ,

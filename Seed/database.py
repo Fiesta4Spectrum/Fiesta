@@ -10,10 +10,8 @@ import time
 import requests
 
 from DecentSpec.Common.utils import check_chain_validity
+import DecentSpec.Common.config as CONFIG
 
-SCAN_RATE = 20      # compute reward per 10s
-LEASING_RATE = 1    # rate of leasing timer reduction
-LEASING_INIT = 20
 class MinerDB:
     def __init__(self):
         self.key = []     # primary key, the name of the seed or its pub key
@@ -40,12 +38,12 @@ class MinerDB:
             self.key.append(key)
             self.addr.append(addr)
             self.role.append(role)
-            self.timer.append(LEASING_INIT)
+            self.timer.append(CONFIG.SEED_LEASING_INIT)
         else:
             idx = self.key.index(key)
             self.addr[idx] = addr
             self.role[idx] = role
-            self.timer[idx] = LEASING_INIT
+            self.timer[idx] = CONFIG.SEED_LEASING_INIT
         return 0
 
     def tick(self):
@@ -62,7 +60,7 @@ class MinerDB:
                     self.timer.pop(i)
                 else:
                     i = i + 1
-            time.sleep(LEASING_RATE) 
+            time.sleep(CONFIG.SEED_LEASING_COUNTDOWN) 
 
     def __runTick(self):    # we do not use it currently
         tick_thread = Thread(target=self.tick)
@@ -126,7 +124,7 @@ class RewardDB:
             for node in self.rewardDict:
                 print(self.rewardDict[node].showContribution())
             print("============== =============== ===============")
-            time.sleep(SCAN_RATE)
+            time.sleep(CONFIG.SEED_CHAIN_SCAN_RATE)
     
     def updateReward(self, dictChain):
         self.__flush()  # calculate reward from the very first block
