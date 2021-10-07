@@ -1,0 +1,5 @@
+Development Log
+
+TODO:
+[Seed] use a real database instead of in-Memory object.
+[Seed] add new api to query the reward of a specific device.

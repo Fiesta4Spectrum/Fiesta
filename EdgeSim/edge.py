@@ -12,7 +12,6 @@ from DecentSpec.Common.model import SharedModel
 import DecentSpec.Common.config as CONFIG
 
 
-LOCAL_DATASET = "DecentSpec/EdgeSim/GPS-power.dat"     # data structure 
 myName = genName()
 print("***** NODE init, I am edge {} *****".format(myName))
 
@@ -133,7 +132,7 @@ def localTraining(model, data, para):
     return size, avg_loss_begin - avg_loss_end, save_weights_into_dict(model)
 
 # emulator local init =======================================
-localFeeder = DataFeeder(LOCAL_DATASET)
+localFeeder = DataFeeder(CONFIG.LOCAL_DATASET_FILE)
 
 while localFeeder.haveData():
 # full life cycle of one round ==============================

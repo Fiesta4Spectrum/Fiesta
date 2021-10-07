@@ -3,6 +3,7 @@ DEFAULT_NN_STRUCTURE = [2,50,50,50,1]
 DEFAULT_NAME_LENGTH = 10
 
 RANDOM_EDGE = False # do we need to random send?
+LOCAL_DATASET_FILE = "DecentSpec/Dataset/GPS-power.dat"     # data structure 
 SEED_ADDR = "http://api.decentspec.org:5000"
 
 # seed server related consts
