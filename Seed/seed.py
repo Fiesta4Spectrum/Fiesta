@@ -11,9 +11,7 @@ from DecentSpec.Common.utils import save_weights_into_dict, genName
 import DecentSpec.Common.config as CONFIG
 
 seed = Flask(__name__)
-myport = "5000"
-if (len(sys.argv) == 2):
-    myport = sys.argv[1]
+    
 myName = genName()  # name of this seed server
 print("***** NODE init, I am seed {} *****".format(myName))
 myMembers = MinerDB()
@@ -102,5 +100,8 @@ memListThread = threading.Thread(target=memberList)
 memListThread.setDaemon(True)
 # memListThread.start()
 
+myport = "5000"
+if (len(sys.argv) == 2):
+    myport = sys.argv[1]
 if __name__ == '__main__':
     seed.run(host='0.0.0.0', port=int(myport))

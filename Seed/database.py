@@ -124,7 +124,7 @@ class RewardDB:
             for node in self.rewardDict:
                 print(self.rewardDict[node].showContribution())
             print("============== =============== ===============")
-            time.sleep(CONFIG.SEED_CHAIN_SCAN_RATE)
+            time.sleep(CONFIG.SEED_CHAIN_SCAN_INTERVAL)
     
     def updateReward(self, dictChain):
         self.__flush()  # calculate reward from the very first block
