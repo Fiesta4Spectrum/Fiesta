@@ -17,7 +17,7 @@ print("***** NODE init, I am seed {} *****".format(myName))
 myMembers = MinerDB()
 
 layerStructure = CONFIG.DEFAULT_NN_STRUCTURE
-seedName = genName()    # name of this seed
+seedName = "TV_Channel_regression_v1"    # name of this seed
 seedModel = SharedModel(layerStructure)
 
 preprocPara = {

@@ -110,7 +110,7 @@ class RewardDB:
             fromwhom = 'nobody'
             longest_chain = []
             for miner in peers:
-                response = requests.get('{}/chain'.format(miner))
+                response = requests.get(miner + CONFIG.API_GET_CHAIN)
                 length = response.json()['length']
                 chain = response.json()['chain']
                 if length > current_len and check_chain_validity(chain, self.para["difficulty"]):
@@ -140,7 +140,7 @@ class RewardDB:
                 self.rewardDict[key] = Contributor(key, 'miner')
             self.rewardDict[key].mine()
 
-            for tx in block["transactions"]:
+            for tx in block["local_list"]:
                 if tx["type"] == "localModelWeight":
                     # calculate edge contribution
                     # print("the author of this update is {}".format(tx['author']))
