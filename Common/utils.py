@@ -14,14 +14,18 @@ class Intrpt:
     def __init__(self, desc="noDescription"):
         self.flag = False
         self.lock = Lock()
-    def checkAndRst(self):
+        self.desc = desc
+    def check_and_rst(self):
         with self.lock:
             ret = self.flag
             self.flag = False
         return ret
-    def Raise(self):
+    def set(self):
         with self.lock:
             self.flag = True
+
+def log(tag, content):
+    print(tag + ":" + content)
 
 def genName(num=CONFIG.DEFAULT_NAME_LENGTH):
     salt = ''.join(random.sample(string.ascii_letters + string.digits, num))

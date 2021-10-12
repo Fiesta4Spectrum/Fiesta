@@ -21,23 +21,25 @@ seedName = genName()    # name of this seed
 seedModel = SharedModel(layerStructure)
 
 preprocPara = {
-    'avg' : [43.07850074790703,-89.3982621182465,-58.52785514280172] ,
-    'std' : [0.026930841086101193, 0.060267757907425355,7.434576197607559] ,
+    'avg' : [43.07850074790703, -89.3982621182465, -58.52785514280172],
+    'std' : [0.026930841086101193, 0.060267757907425355, 7.434576197607559],
 }
+
 trainPara = {
     'batch' : 10,
     'lr'    : 0.001,
     'opt'   : 'Adam',
-    'epoch' : 5,       # local epoch nums
+    'epoch' : 5,                            # local epoch Num
     'loss'  : 'MSE',
 }
+
 Para = {
     'alpha' : 1,
     'preprocPara' : preprocPara,
     'trainPara' : trainPara,
     'layerStructure' : layerStructure,
     'difficulty' : 3,
-}
+} 
 
 rewardRecord = RewardDB(myMembers, Para)
 
