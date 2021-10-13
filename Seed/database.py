@@ -9,7 +9,6 @@ from threading import Thread, Lock
 import time
 import requests
 
-from DecentSpec.Common.utils import check_chain_validity
 import DecentSpec.Common.config as CONFIG
 
 class MinerDB:
@@ -113,7 +112,7 @@ class RewardDB:
                 response = requests.get(miner + CONFIG.API_GET_CHAIN)
                 length = response.json()['length']
                 chain = response.json()['chain']
-                if length > current_len and check_chain_validity(chain, self.para["difficulty"]):
+                if length > current_len:
                     current_len = length
                     longest_chain = chain
                     fromwhom = miner

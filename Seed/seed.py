@@ -11,7 +11,11 @@ from DecentSpec.Common.utils import save_weights_into_dict, genName
 import DecentSpec.Common.config as CONFIG
 
 seed = Flask(__name__)
-    
+
+myPort = "5000"
+if (len(sys.argv) == 2):
+    myPort = sys.argv[1]
+
 myName = genName()  # name of this seed server
 print("***** NODE init, I am seed {} *****".format(myName))
 myMembers = MinerDB()
@@ -43,13 +47,14 @@ Para = {
 
 rewardRecord = RewardDB(myMembers, Para)
 
-# register related api 
-@seed.route('/miner_peers', methods=['GET'])
+# register related api ===================================
+
+@seed.route(CONFIG.API_GET_MINER, methods=['GET'])
 def get_peers():
     global myMembers
     return json.dumps({'peers' : myMembers.getList()})
 
-@seed.route('/register', methods=['POST'])
+@seed.route(CONFIG.API_REGISTER, methods=['POST'])
 def reg_miner():
     global myMembers
     global Para
@@ -98,12 +103,13 @@ def memberList():
             print(myMembers.showMember(i))
         time.sleep(5)
 
-memListThread = threading.Thread(target=memberList)
-memListThread.setDaemon(True)
-# memListThread.start()
-
-myport = "5000"
-if (len(sys.argv) == 2):
-    myport = sys.argv[1]
 if __name__ == '__main__':
-    seed.run(host='0.0.0.0', port=int(myport))
+
+    memListThread = threading.Thread(target=memberList)
+    memListThread.setDaemon(True)
+    memListThread.start()
+
+    seed.run(host='0.0.0.0', port=int(myPort))
+
+
+

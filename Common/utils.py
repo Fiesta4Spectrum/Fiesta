@@ -23,7 +23,7 @@ class Intrpt:
             self.flag = True
 
 def log(tag, content):
-    print(tag + ":" + content)
+    print("[{}] {}".format(tag, content))
 
 def genName(num=CONFIG.DEFAULT_NAME_LENGTH):
     salt = ''.join(random.sample(string.ascii_letters + string.digits, num))

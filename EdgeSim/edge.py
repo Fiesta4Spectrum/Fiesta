@@ -12,9 +12,6 @@ from DecentSpec.Common.model import SharedModel
 import DecentSpec.Common.config as CONFIG
 
 
-myName = genName()
-print("***** NODE init, I am edge {} *****".format(myName))
-
 class DataFeeder:                   # emulate each round dataset feeder
     def __init__(self, filePath):
         self.st_avg = []
@@ -53,13 +50,15 @@ class DataFeeder:                   # emulate each round dataset feeder
         # does this emulator have further dataset
 
 def fetchList(addr):
-    response = requests.get("{}/miner_peers".format(addr))
+    response = requests.get(addr + CONFIG.API_GET_MINER)
     print(response.json())
     return response.json()['peers']
 
 def getLatest(addr):
-    response = requests.get("{}/global_model".format(addr))
+    print("start fetch the global")
+    response = requests.get(addr + CONFIG.API_GET_GLOBAL)
     data = response.json()
+    print("fetched the global")
     return data['weight'], data['preprocPara'], data['trainPara'], data['layerStructure']
 
 def pushTrained(size, lossDelta, weight, addr):
@@ -78,9 +77,9 @@ def pushTrained(size, lossDelta, weight, addr):
         'type' : 'localModelWeight',
         'plz_spread' : 1,
     }
-    requests.post(  addr + '/new_transaction',
+    requests.post(  addr + CONFIG.API_POST_LOCAL,
                     json=data,
-                    headers={'Content-type': 'application/json'})
+                    )
     # send to server
 
 class getDataSet(torch.utils.data.Dataset):
@@ -131,31 +130,37 @@ def localTraining(model, data, para):
 
     return size, avg_loss_begin - avg_loss_end, save_weights_into_dict(model)
 
-# emulator local init =======================================
-localFeeder = DataFeeder(CONFIG.LOCAL_DATASET_FILE)
+if __name__ == '__main__':
 
-while localFeeder.haveData():
-# full life cycle of one round ==============================
-    # miner communication
-    minerList = fetchList(CONFIG.SEED_ADDR)
-    modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList[0])
-    # model init, should have built according to miner response
-    # TODO sharedModel is impossible in real situation
-    myModel = SharedModel(layerStructure)
-    load_weights_from_dict(myModel, modelWeights)
-    # data preprocessing setup
-    localFeeder.setPreProcess(preprocPara)
-    # local training
-    size, lossDelta, weight = localTraining(myModel, localFeeder.fetch(), trainPara)
-    # print(myModel.state_dict())
-    # send back to server
-    addr = minerList[0]
-    if CONFIG.RANDOM_EDGE:
-        addr = random.choice(minerList)
-    pushTrained(size, lossDelta, weight, addr)
-# end of the life cycle =====================================
+    myName = genName()
+    print("***** NODE init, I am edge {} *****".format(myName))
 
-print("local dataset training done!")
-while True:
-    pass
-# TODO loss estimation and map visualization
+    # emulator local init =======================================
+    localFeeder = DataFeeder(CONFIG.LOCAL_DATASET_FILE)
+
+    while localFeeder.haveData():
+    # full life cycle of one round ==============================
+        # miner communication
+        minerList = fetchList(CONFIG.SEED_ADDR)
+        modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList[0])
+        # model init, should have built according to miner response
+        # TODO sharedModel is impossible in real situation
+        myModel = SharedModel(layerStructure)
+        load_weights_from_dict(myModel, modelWeights)
+        # data preprocessing setup
+        localFeeder.setPreProcess(preprocPara)
+        # local training
+        size, lossDelta, weight = localTraining(myModel, localFeeder.fetch(), trainPara)
+        # print(myModel.state_dict())
+        # send back to server
+        addr = minerList[0]
+        if CONFIG.RANDOM_EDGE:
+            addr = random.choice(minerList)
+        pushTrained(size, lossDelta, weight, addr)
+    # end of the life cycle =====================================
+
+    print("local dataset training done!")
+    while True:
+        # spin here to display the training procedure
+        pass
+    # TODO loss estimation and map visualization

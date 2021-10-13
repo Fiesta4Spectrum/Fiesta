@@ -4,13 +4,13 @@ import DecentSpec.Common.config as CONFIG
 
 class Block:
 
-    def __init__(self, local_list, prev_hash, time_stamp, index, para, miner):
+    def __init__(self, local_list, prev_hash, time_stamp, index, para, miner, base_weight):
         # header
         self.prev_hash = prev_hash
         self.hash = None
         self.index = index
         self.miner = miner
-        self.timestamp = time_stamp
+        self.time_stamp = time_stamp
         self.nonce = 0
         self.difficulty = para.difficulty
         self.seed_name = para.seed_name         # since every miner has a copy of the full seed parameters in myPara
@@ -21,7 +21,7 @@ class Block:
         self.local_hash = hashValue(local_list) # the replacement for full local list when hashing
         
         # global model
-        self.base_global = para.init_weight
+        self.base_global = base_weight
         self.new_global = Block.ewma_mix(self.local_list, self.base_global, para.alpha)
     
     def get_block_dict(self, shrank=False, with_hash=True):
@@ -33,16 +33,16 @@ class Block:
         return shrank_block
     
     def compute_hash(self):
-        return hashValue(self.get_block_dict(shrank=CONFIG.FAST_HASH_AND_SHARE, with_hash=False))
+        return hashValue(self.get_block_dict(shrank=True, with_hash=False))
 
     def get_global(self):
         return self.new_global
     
     @staticmethod
     def ewma_mix(local_list, base, alpha):
-        if local_list == None or len(local_list) < 1:
+        if local_list == None or len(local_list) < 1 or base == None:
             return None
-
+        base_tensor = dict2tensor(base)
         locals_with_size = []
         total_size = 0
         for local in local_list:
@@ -64,50 +64,53 @@ class Block:
                     averaged_weight[k] = local_weight[k] * w
                 else:
                     averaged_weight[k] += local_weight[k] * w
-            averaged_weight[k] = (1-alpha) * base[k] + alpha * averaged_weight[k]
+            averaged_weight[k] = (1-alpha) * base_tensor[k] + alpha * averaged_weight[k]
         return tensor2dict(averaged_weight)
 
 class BlockChain:
     def __init__(self):
-        self.lock = Lock()
+        # self.lock = Lock()
         self.chain = []
 
     def create_genesis_block(self, para):
-        genesis_block = Block([], CONFIG.GENESIS_HASH, 0, 0, para, para.seeder)
+        genesis_block = Block([], CONFIG.GENESIS_HASH, 0, 0, para, para.seeder, None)
         genesis_block.hash = genesis_block.compute_hash()
+        genesis_block.new_global = para.init_weight
         self.chain.append(genesis_block)
 
     def flush(self):
-        with self.lock:
+        # with self.lock:
             self.chain = []
     
     def replace(self, new_chain):
-        with self.lock:
+        # with self.lock:
             self.chain = new_chain
     
     def get_chain_list(self):
-        with self.lock:
+        # with self.lock:
             chain_data = []
             for block in self.chain:
-                chain_data.append(block.get_block_dict(shrank=CONFIG.FAST_HASH_AND_SHARE, with_hash=True))
+                chain_data.append(block.get_block_dict(shrank=CONFIG.FAST_SHARE, with_hash=True))
             return chain_data
 
+    @property
     def last_block(self):
-        with self.lock:
+        # with self.lock:
             return self.chain[-1]
     
     @property
     def difficulty(self):
-        with self.lock:
-            return self.last_block().difficulty
-
+        # with self.lock:
+            return self.last_block.difficulty
+    
+    @property
     def size(self):
-        with self.lock:
+        # with self.lock:
             return len(self.chain)
 
     def valid_then_add(self, new_block):
-        with self.lock:
-            my_last = self.last_block()
+        # with self.lock:
+            my_last = self.last_block
             # continuity check
             if new_block.index != my_last.index + 1:
                 log("add block", "fails for index mismatch")

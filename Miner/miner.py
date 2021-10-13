@@ -11,8 +11,9 @@ from DecentSpec.Miner.blockChain import Block, BlockChain
 from DecentSpec.Miner.pool import Pool
 from DecentSpec.Miner.para import Para
 
-miner = Flask(__name__)
+# local field init ========================
 
+miner = Flask(__name__)
 myPort = "8000"
 myIp = "http://api.decentspec.org"
 if (len(sys.argv) == 3):
@@ -21,10 +22,10 @@ if (len(sys.argv) == 3):
 else:
     print("incorrect parameter")
     exit
+
 myAddr = myIp + ":" + myPort
 myName = genName()
-
-# local field and lock init ========================
+print("***** NODE init, I am miner {} *****".format(myName))
 
 myChain = BlockChain()
 myPool = Pool()
@@ -84,12 +85,19 @@ def get_pool():
 
     return json.dumps(myPool.get_pool_list())
 
+'''test only'''
+@miner.route('/test', methods=['GET'])
+def get_para():
+    global myChain
+    return json.dumps(myChain.size)
+
 @miner.route(CONFIG.API_GET_GLOBAL, methods=['GET'])
 def get_global():
     global myChain
+    global myPara
 
-    latest = myChain.last_block()
-    para = latest.para
+    latest = myChain.last_block
+    para = myPara
     data = {    'weight' : latest.get_global(),
                 'preprocPara' : para.preproc,
                 'trainPara' : para.train,
@@ -112,7 +120,7 @@ def get_chain_simple():
     global myChain
     data = {
         'length' : myChain.size,
-        'latest_block' : myChain.last_block().get_block_dict(),
+        'latest_block' : myChain.last_block.get_block_dict(),
     }
     return json.dumps(data)
 
@@ -134,10 +142,8 @@ def new_block():
 
     return "added", 200
 
-if __name__ == '__main__':
-    miner.run(host='0.0.0.0', port=int(myPort))
-
 # register thread setup ============================
+
 def register():
     global myPeers
     global myPara
@@ -159,18 +165,14 @@ def register():
             myChain.create_genesis_block(myPara)
     else:
         # TODO when http get fails
+        log("register", "seed server not available")
         pass
 
 
 def register_thread():
     while True:
-        time.sleep(CONFIG.MINER_REG_INTERVAL)
         register()
-
-register() # doing one fresh register first to make sure we have genisis block
-regThread = Thread(target=register_thread)
-regThread.setDaemon(True)
-regThread.start()
+        time.sleep(CONFIG.MINER_REG_INTERVAL)
 
 # pow thread setup =================================
 
@@ -180,7 +182,7 @@ def mine():
 
     while True:
         time.sleep(CONFIG.BLOCK_GEN_INTERVAL)
-        if myChain.difficulty < 1:
+        if myPara == None or myChain.difficulty < 1:
             log("mine", "difficulty not set")
             continue
 
@@ -191,7 +193,7 @@ def mine():
                 if i_am_the_longest_chain():
                     myChain.valid_then_add(new_block)
                     myPool.remove(new_block.local_list)
-                    announce_new_block(myChain.last_block())
+                    announce_new_block(myChain.last_block)
                     log("mine", "new block #{} is mined".format(new_block.index))
                 else:
                     log("mine", "get a longer chain from else where")
@@ -206,11 +208,12 @@ def gen_candidate_block(local_list):
     
     new_block = Block(
         local_list,
-        myChain.last_block().hash,
+        myChain.last_block.hash,
         genTimestamp(),
-        myChain.size(),
+        myChain.size,
         myPara,
-        myName
+        myName,
+        myChain.last_block.new_global
     )
 
     # proof of work
@@ -231,7 +234,7 @@ def i_am_the_longest_chain():
     global myChain
 
     i_am = True
-    max_len = myChain.size()
+    max_len = myChain.size
 
     for peer in myPeers:
         resp = requests.get(peer + CONFIG.API_GET_CHAIN_SIMPLE).json()  # get the short version
@@ -253,12 +256,8 @@ def announce_new_block(new_block):
     for peer in myPeers:
         requests.post(
             url = peer + CONFIG.API_POST_BLOCK,
-            json = new_block.get_block_dict(shrank=CONFIG.FAST_HASH_AND_SHARE, with_hash=True)
+            json = new_block.get_block_dict(shrank=CONFIG.FAST_SHARE, with_hash=True)
         )
-
-powThread = Thread(target = mine)
-powThread.setDaemon(True)
-powThread.start()
 
 # helper methods ===================================
 
@@ -285,14 +284,14 @@ def extract_block_from_dict(resp):
         resp['time_stamp'],
         resp['index'],
         myPara,
-        resp['miner']
+        resp['miner'],
+        resp['base_global']
     )
     template.hash = resp['hash']
     template.nonce = resp['nonce']
     template.difficulty = resp['difficulty']
     template.seed_name = resp['seed_name']
     template.local_hash = resp['local_hash']
-    template.base_global = resp['base_global']
     template.new_global = resp['new_global']
 
     return template
@@ -323,7 +322,20 @@ def valid_chain(new_chain):
     prev_hash = CONFIG.GENESIS_HASH
     for block in new_chain:
         if (not prev_hash == block.hash) or (valid_hash(block)):
-            log("chain validation", "wrong hash for block #" + block.index)
+            log("chain validation", "wrong hash for block #{}".format(block.index))
             return False
         prev_hash = block.hash
     return True
+
+if __name__ == '__main__':
+    # threads init ==============================
+
+    regThread = Thread(target=register_thread)
+    regThread.setDaemon(True)
+    regThread.start()
+
+    powThread = Thread(target=mine)
+    powThread.setDaemon(True)
+    powThread.start()
+
+    miner.run(host='0.0.0.0', port=int(myPort))
