@@ -30,7 +30,10 @@ class Pool:
 
     def get_pool_list(self):
         with self.lock:
-            return list(map(lambda x: json.loads(x), self.pool))
+            return list(map(
+                lambda x: json.loads(x),
+                self.pool
+                ))
                                             # return List<Dict> from Set<JSON>
     
     def size(self):

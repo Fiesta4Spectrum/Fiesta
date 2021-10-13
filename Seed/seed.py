@@ -78,7 +78,7 @@ def flush():
     seedModel = SharedModel(layerStructure)
     globalWeight = save_weights_into_dict(seedModel)
     post_object = {
-        'name' : 'seed1',
+        'name' : seedName,
         'from' : myName,
         'seedWeight' : globalWeight,
         'para' : Para,

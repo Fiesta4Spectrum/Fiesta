@@ -24,7 +24,7 @@ class Block:
         self.base_global = para.init_weight
         self.new_global = Block.ewma_mix(self.local_list, self.base_global, para.alpha)
     
-    def get_block_dict(self, shrank=False, with_hash=False):
+    def get_block_dict(self, shrank=False, with_hash=True):
         shrank_block = self.__dict__.copy()
         if not with_hash:
             shrank_block.pop('hash')
@@ -33,13 +33,16 @@ class Block:
         return shrank_block
     
     def compute_hash(self):
-        return hashValue(self.get_block_dict(shrank=CONFIG.FAST_HASH, with_hash=False))
+        return hashValue(self.get_block_dict(shrank=CONFIG.FAST_HASH_AND_SHARE, with_hash=False))
 
     def get_global(self):
         return self.new_global
     
     @staticmethod
     def ewma_mix(local_list, base, alpha):
+        if local_list == None or len(local_list) < 1:
+            return None
+
         locals_with_size = []
         total_size = 0
         for local in local_list:
@@ -50,8 +53,7 @@ class Block:
                 locals_with_size.append(
                     (size, dict2tensor(MLdata['weight']))
                 )
-        if len(locals_with_size) < 1:
-            return None
+
         averaged_weight = {}
         for k in locals_with_size[0][1].keys():
             
@@ -79,17 +81,26 @@ class BlockChain:
         with self.lock:
             self.chain = []
     
+    def replace(self, new_chain):
+        with self.lock:
+            self.chain = new_chain
+    
     def get_chain_list(self):
         with self.lock:
             chain_data = []
             for block in self.chain:
-                chain_data.append(block.get_block_dict())
+                chain_data.append(block.get_block_dict(shrank=CONFIG.FAST_HASH_AND_SHARE, with_hash=True))
             return chain_data
 
     def last_block(self):
         with self.lock:
             return self.chain[-1]
     
+    @property
+    def difficulty(self):
+        with self.lock:
+            return self.last_block().difficulty
+
     def size(self):
         with self.lock:
             return len(self.chain)

@@ -11,10 +11,11 @@ LOCAL_DATASET_FILE = "DecentSpec/Dataset/GPS-power.dat"     # data structure
 MINER_REG_INTERVAL = 19
 UNAMED_POOL = True
 GENESIS_HASH = "genesis_hash"
-FAST_SHARE = True           # share local models' hash only, not the full model
-FAST_HASH = True            # discard the full local list when hashing
-                            # NOTICE: this two FAST must be consistent among all miners
-POOL_MINE_THRESHOLD = 1
+FAST_HASH_AND_SHARE = True  # share local models' hash only, not the full model
+                            # only compute the hash without full detailed local models
+                            # NOTICE: this  must be consistent among all miners
+POOL_MINE_THRESHOLD = 1     # num of local models before mining
+BLOCK_GEN_INTERVAL = 10     # seconds between mining
 
 # @SEED server related 
 SEED_CHAIN_SCAN_INTERVAL = 20     # compute reward per 20s

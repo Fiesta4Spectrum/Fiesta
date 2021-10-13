@@ -6,7 +6,7 @@ import time
 from flask import Flask, request
 
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import genName, log, Intrpt
+from DecentSpec.Common.utils import genName, genTimestamp, log, Intrpt
 from DecentSpec.Miner.blockChain import Block, BlockChain
 from DecentSpec.Miner.pool import Pool
 from DecentSpec.Miner.para import Para
@@ -48,8 +48,8 @@ def reseed():
         return "invalid", 400
     myPool.flush()
     myChain.flush()
-    myPara = extract_para(seed)
-    # TODO init the new block chain
+    myPara = extract_para_from_dict(seed)
+    myChain.create_genesis_block(myPara)
     return "reseeded", 201
 
 @miner.route(CONFIG.API_POST_LOCAL, methods=['POST'])
@@ -122,13 +122,13 @@ def new_block():
     global myPool
     global powIntr
 
-    new_block = extract_block(request.get_json())
+    new_block = extract_block_from_dict(request.get_json())
     if not myChain.valid_then_add(new_block):
         log("new_block", "new outcoming block get discarded")
         return "rejected", 400
     
     # if this new comer is accepted
-    powIntr.set()                                       # reset my pow
+    powIntr.raise_intr()                                       # reset my pow
     log("new_block", "new outcoming block accepted")
     myPool.remove(new_block.local_list)                  # remove the used local in the new block
 
@@ -141,6 +141,7 @@ if __name__ == '__main__':
 def register():
     global myPeers
     global myPara
+    global myChain
 
     data = {
         'name' : myName,
@@ -154,7 +155,8 @@ def register():
         myPeers = set(resp.json()['list'])
         myPeers.remove(myAddr)
         if myPara == None:
-            myPara = extract_para(resp)
+            myPara = extract_para_from_dict(resp)
+            myChain.create_genesis_block(myPara)
     else:
         # TODO when http get fails
         pass
@@ -162,23 +164,105 @@ def register():
 
 def register_thread():
     while True:
-        register()
         time.sleep(CONFIG.MINER_REG_INTERVAL)
+        register()
 
+register() # doing one fresh register first to make sure we have genisis block
 regThread = Thread(target=register_thread)
 regThread.setDaemon(True)
 regThread.start()
 
 # pow thread setup =================================
 
-def proof_of_work():
-    pass
+def mine():
+    global myPool
+    global myChain
 
-    # TODO using multithreading / multiprocess to pow
+    while True:
+        time.sleep(CONFIG.BLOCK_GEN_INTERVAL)
+        if myChain.difficulty < 1:
+            log("mine", "difficulty not set")
+            continue
+
+        if myPool.size >= CONFIG.POOL_MINE_THRESHOLD:
+            log("mine", "enough local model, start pow")
+            new_block = gen_candidate_block(myPool.get_pool_list())
+            if new_block:
+                if i_am_the_longest_chain():
+                    myChain.valid_then_add(new_block)
+                    myPool.remove(new_block.local_list)
+                    announce_new_block(myChain.last_block())
+                    log("mine", "new block #{} is mined".format(new_block.index))
+                else:
+                    log("mine", "get a longer chain from else where")
+            else:
+                log("mine", "mine abort")
+
+def gen_candidate_block(local_list):
+    global powIntr
+    global myChain
+    global myPara
+    global myName
+    
+    new_block = Block(
+        local_list,
+        myChain.last_block().hash,
+        genTimestamp(),
+        myChain.size(),
+        myPara,
+        myName
+    )
+
+    # proof of work
+    cur_hash = new_block.compute_hash()
+    difficulty = myChain.difficulty
+    while not cur_hash.startswith('0' * difficulty):
+        new_block.nonce += 1
+        cur_hash = new_block.compute_hash()
+        if powIntr.check_and_rst():
+            log('pow', 'interrupted!')
+            return None
+    new_block.hash = cur_hash
+
+    return new_block
+
+def i_am_the_longest_chain():
+    global myPeers
+    global myChain
+
+    i_am = True
+    max_len = myChain.size()
+
+    for peer in myPeers:
+        resp = requests.get(peer + CONFIG.API_GET_CHAIN_SIMPLE).json()  # get the short version
+        if resp['length'] > max_len:
+            resp = requests.get(peer + CONFIG.API_GET_CHAIN).json()     # get the full version
+            new_chain = list(map(
+                lambda x: extract_block_from_dict(x), 
+                resp['chain']
+                ))
+            if valid_chain(new_chain):
+                myChain.replace(new_chain)
+                myPool.flush()                                          # flush my pool
+                i_am = False
+                max_len = resp['length']
+    return i_am
+
+def announce_new_block(new_block):
+    global myPeers
+    for peer in myPeers:
+        requests.post(
+            url = peer + CONFIG.API_POST_BLOCK,
+            json = new_block.get_block_dict(shrank=CONFIG.FAST_HASH_AND_SHARE, with_hash=True)
+        )
+
+powThread = Thread(target = mine)
+powThread.setDaemon(True)
+powThread.start()
 
 # helper methods ===================================
 
-def extract_para(resp):
+def extract_para_from_dict(resp):
     # extract para from a json
     para = resp.json()['para']
     return Para(
@@ -192,9 +276,26 @@ def extract_para(resp):
         nn_structure=para['layerStructure']
     )
 
-def extract_block(resp):
-    # TODO extract block object from a json 
-    return Block()
+def extract_block_from_dict(resp):
+    global myPara
+
+    template = Block(
+        [],
+        resp['prev_hash'],
+        resp['time_stamp'],
+        resp['index'],
+        myPara,
+        resp['miner']
+    )
+    template.hash = resp['hash']
+    template.nonce = resp['nonce']
+    template.difficulty = resp['difficulty']
+    template.seed_name = resp['seed_name']
+    template.local_hash = resp['local_hash']
+    template.base_global = resp['base_global']
+    template.new_global = resp['new_global']
+
+    return template
 
 def valid_resp(resp):
     return resp.status_code == requests.codes.ok
@@ -205,4 +306,24 @@ def valid_seed(new_seed):
 
 def valid_model(new_local):
     # TODO validate the new model from an edge device
+    return True
+
+def valid_hash(new_block):
+    return (new_block.compute_hash() == new_block.hash) and \
+            (new_block.hash.startswith('0' * new_block.difficulty))
+
+def valid_chain(new_chain):
+    global myPara
+    # valid it is a good chain
+    # and compatible with our para
+    if new_chain[0].seed_name != myPara.seed_name:
+        log("chain validation", "outcoming chain from a different seed")
+        return False
+
+    prev_hash = CONFIG.GENESIS_HASH
+    for block in new_chain:
+        if (not prev_hash == block.hash) or (valid_hash(block)):
+            log("chain validation", "wrong hash for block #" + block.index)
+            return False
+        prev_hash = block.hash
     return True
