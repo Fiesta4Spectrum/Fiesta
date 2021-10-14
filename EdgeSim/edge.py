@@ -1,6 +1,6 @@
+import sys
+from time import sleep
 import requests
-import json
-import jsonpickle
 import random
 
 import torch
@@ -10,7 +10,17 @@ import torch.optim as optim
 from DecentSpec.Common.utils import save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
 from DecentSpec.Common.model import SharedModel
 import DecentSpec.Common.config as CONFIG
+'''
+usage:
+    python -m DecentSpec.EdgeSim.edge {1} {2} {3}
+    {1} - train set
+    {2} - test set
+    {3} - size per round
+'''
 
+task_name = None
+global_gen = -1
+myName = genName()
 
 class DataFeeder:                   # emulate each round dataset feeder
     def __init__(self, filePath):
@@ -40,7 +50,7 @@ class DataFeeder:                   # emulate each round dataset feeder
                 st_line.append( (item - self.st_avg[j])/self.st_dev[j] )
             st_list.append(st_line)
         return st_list
-    def fetch(self, size=10000):
+    def fetch(self, size):
         # return a dataset of UNCERTAIN size everytime
         partialList = self.fullList[self.ctr:self.ctr+size]
         self.ctr += size
@@ -54,11 +64,23 @@ def fetchList(addr):
     print(response.json())
     return response.json()['peers']
 
-def getLatest(addr):
-    print("start fetch the global")
-    response = requests.get(addr + CONFIG.API_GET_GLOBAL)
-    data = response.json()
-    print("fetched the global")
+def getLatest(addr_list):
+    global task_name
+    global global_gen
+    while True:
+        addr = random.choice(addr_list)
+        response = requests.get(addr + CONFIG.API_GET_GLOBAL)
+        data = response.json()
+        new_task_name = data['seed_name']
+        new_global_gen = data['generation']
+        if new_task_name != task_name or new_global_gen > global_gen:
+            break
+        print("spin because {} is an old guy".format(addr))
+        sleep(CONFIG.EDGE_TRAIN_INTERVAL)
+    task_name = new_task_name
+    global_gen = new_global_gen
+    
+    print("train for task<{}> of gen<{}>".format(task_name, global_gen))
     return data['weight'], data['preprocPara'], data['trainPara'], data['layerStructure']
 
 def pushTrained(size, lossDelta, weight, addr):
@@ -68,8 +90,6 @@ def pushTrained(size, lossDelta, weight, addr):
         'weight' : weight
     }
     global myName
-    if CONFIG.RANDOM_EDGE:
-        myName = genName()
     data = {
         'author' : myName,
         'content' : MLdata,
@@ -132,35 +152,40 @@ def localTraining(model, data, para):
 
 if __name__ == '__main__':
 
-    myName = genName()
     print("***** NODE init, I am edge {} *****".format(myName))
 
     # emulator local init =======================================
-    localFeeder = DataFeeder(CONFIG.LOCAL_DATASET_FILE)
+    if len(sys.argv) == 4:
+        train_file = sys.argv[1]
+        test_file = sys.argv[2]
+        fetch_size_per = int(sys.argv[3])
+    else:
+        train_file = CONFIG.LOCAL_DATASET_FILE
+        test_file = CONFIG.LOCAL_DATASET_FILE
+        fetch_size_per = 10000
+    
+    print("***   will use trainFile<{}> and testFile<{}>   ***".format(train_file, test_file))
+
+    localFeeder = DataFeeder(train_file)
 
     while localFeeder.haveData():
     # full life cycle of one round ==============================
         # miner communication
         minerList = fetchList(CONFIG.SEED_ADDR)
-        modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList[0])
+        modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList)
         # model init, should have built according to miner response
-        # TODO sharedModel is impossible in real situation
         myModel = SharedModel(layerStructure)
         load_weights_from_dict(myModel, modelWeights)
         # data preprocessing setup
         localFeeder.setPreProcess(preprocPara)
         # local training
-        size, lossDelta, weight = localTraining(myModel, localFeeder.fetch(), trainPara)
+        size, lossDelta, weight = localTraining(myModel, localFeeder.fetch(fetch_size_per), trainPara)
         # print(myModel.state_dict())
         # send back to server
-        addr = minerList[0]
-        if CONFIG.RANDOM_EDGE:
-            addr = random.choice(minerList)
+        addr = random.choice(minerList)
         pushTrained(size, lossDelta, weight, addr)
     # end of the life cycle =====================================
 
     print("local dataset training done!")
-    while True:
-        # spin here to display the training procedure
-        pass
+    sleep(10) # sleep 10s
     # TODO loss estimation and map visualization

@@ -36,6 +36,12 @@ def hashValue(content):
     strValue = json.dumps(content, sort_keys=True)
     return sha256(strValue.encode()).hexdigest()
 
+def difficultyCheck(hash, difficulty):
+    if CONFIG.POW_ENABLE:
+        return hash.startswith("0" * difficulty)
+    else:
+        return True
+
 # store and load weights
 def save_weights_into_dict(model):
     return tensor2dict(model.state_dict())

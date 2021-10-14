@@ -1,5 +1,5 @@
 from threading import Lock
-from DecentSpec.Common.utils import dict2tensor, hashValue, genTimestamp, tensor2dict, log
+from DecentSpec.Common.utils import dict2tensor, difficultyCheck, hashValue, genTimestamp, tensor2dict, log
 import DecentSpec.Common.config as CONFIG
 
 class Block:
@@ -90,7 +90,7 @@ class BlockChain:
         # with self.lock:
             chain_data = []
             for block in self.chain:
-                chain_data.append(block.get_block_dict(shrank=CONFIG.FAST_SHARE, with_hash=True))
+                chain_data.append(block.get_block_dict(shrank=False, with_hash=True))
             return chain_data
 
     @property
@@ -122,7 +122,7 @@ class BlockChain:
                 log("add block", "fails for wrong hash")
                 return False
             # difficulty check
-            if (my_last.difficulty != new_block.difficulty) or (not new_block.hash.startswith('0' * my_last.difficulty)):
+            if (my_last.difficulty != new_block.difficulty) or (not difficultyCheck(new_block.hash, my_last.difficulty)):
                 log("add block", "fails for difficulty requirement")
                 return False
             self.chain.append(new_block)

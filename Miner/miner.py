@@ -6,7 +6,7 @@ import time
 from flask import Flask, request
 
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import genName, genTimestamp, log, Intrpt
+from DecentSpec.Common.utils import difficultyCheck, genName, genTimestamp, log, Intrpt
 from DecentSpec.Miner.blockChain import Block, BlockChain
 from DecentSpec.Miner.pool import Pool
 from DecentSpec.Miner.para import Para
@@ -102,6 +102,8 @@ def get_global():
                 'preprocPara' : para.preproc,
                 'trainPara' : para.train,
                 'layerStructure' : para.nn_structure,
+                'seed_name' : para.seed_name,
+                'generation' : myChain.size,
                 }
     return json.dumps(data)
 
@@ -133,8 +135,9 @@ def new_block():
     new_block = extract_block_from_dict(request.get_json())
     if not myChain.valid_then_add(new_block):
         log("new_block", "new outcoming block get discarded")
+        if new_block.index > myChain.size and new_block.seed_name == myPara.seed_name:
+            consensus()
         return "rejected", 400
-    
     # if this new comer is accepted
     powIntr.raise_intr()                                       # reset my pow
     log("new_block", "new outcoming block accepted")
@@ -190,7 +193,7 @@ def mine():
             log("mine", "enough local model, start pow")
             new_block = gen_candidate_block(myPool.get_pool_list())
             if new_block:
-                if i_am_the_longest_chain():
+                if consensus():
                     myChain.valid_then_add(new_block)
                     myPool.remove(new_block.local_list)
                     announce_new_block(myChain.last_block)
@@ -219,7 +222,7 @@ def gen_candidate_block(local_list):
     # proof of work
     cur_hash = new_block.compute_hash()
     difficulty = myChain.difficulty
-    while not cur_hash.startswith('0' * difficulty):
+    while not difficultyCheck(cur_hash, new_block.difficulty):
         new_block.nonce += 1
         cur_hash = new_block.compute_hash()
         if powIntr.check_and_rst():
@@ -229,9 +232,10 @@ def gen_candidate_block(local_list):
 
     return new_block
 
-def i_am_the_longest_chain():
+def consensus():
     global myPeers
     global myChain
+    global powIntr
 
     i_am = True
     max_len = myChain.size
@@ -245,6 +249,7 @@ def i_am_the_longest_chain():
                 resp['chain']
                 ))
             if valid_chain(new_chain):
+                powIntr.raise_intr()
                 myChain.replace(new_chain)
                 myPool.flush()                                          # flush my pool
                 i_am = False
@@ -256,7 +261,7 @@ def announce_new_block(new_block):
     for peer in myPeers:
         requests.post(
             url = peer + CONFIG.API_POST_BLOCK,
-            json = new_block.get_block_dict(shrank=CONFIG.FAST_SHARE, with_hash=True)
+            json = new_block.get_block_dict(shrank=False, with_hash=True)
         )
 
 # helper methods ===================================
@@ -279,7 +284,7 @@ def extract_block_from_dict(resp):
     global myPara
 
     template = Block(
-        [],
+        resp['local_list'],
         resp['prev_hash'],
         resp['time_stamp'],
         resp['index'],
@@ -308,8 +313,7 @@ def valid_model(new_local):
     return True
 
 def valid_hash(new_block):
-    return (new_block.compute_hash() == new_block.hash) and \
-            (new_block.hash.startswith('0' * new_block.difficulty))
+    return (new_block.compute_hash() == new_block.hash) and difficultyCheck(new_block.hash, new_block.difficulty)
 
 def valid_chain(new_chain):
     global myPara
@@ -321,7 +325,7 @@ def valid_chain(new_chain):
 
     prev_hash = CONFIG.GENESIS_HASH
     for block in new_chain:
-        if (not prev_hash == block.hash) or (valid_hash(block)):
+        if (not prev_hash == block.prev_hash) or (valid_hash(block)):
             log("chain validation", "wrong hash for block #{}".format(block.index))
             return False
         prev_hash = block.hash
