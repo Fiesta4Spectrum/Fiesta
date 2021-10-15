@@ -3,6 +3,7 @@ DEFAULT_NN_STRUCTURE = [2,50,50,50,1]
 DEFAULT_NAME_LENGTH = 10
 SEED_ADDR = "http://api.decentspec.org:5000"
 POW_ENABLE = True # false will disable the difficulty check which we do not care hash anymore
+REPRODUCIBILITY = True
 
 # @EDGE_SIM related 
 RANDOM_EDGE = True # do we need to random send?
@@ -13,8 +14,10 @@ EDGE_TRAIN_INTERVAL = 1    # seconds between two round
 MINER_REG_INTERVAL = 19
 UNAMED_POOL = True
 GENESIS_HASH = "genesis_hash"
+CHAIN_LOGGER = True
 
-POOL_MINE_THRESHOLD = 3     # num of local models before mining
+# POOL_MINE_THRESHOLD = 3     # num of local models before mining
+                                # get mine threshold at runtime for easy test
 BLOCK_GEN_INTERVAL = 1      # seconds between mining
 
 # @SEED server related 

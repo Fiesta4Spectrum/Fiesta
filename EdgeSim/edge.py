@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from DecentSpec.Common.utils import save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
+from DecentSpec.Common.utils import log, save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
 from DecentSpec.Common.model import SharedModel
 import DecentSpec.Common.config as CONFIG
 '''
@@ -68,8 +68,14 @@ def getLatest(addr_list):
     global task_name
     global global_gen
     while True:
-        addr = random.choice(addr_list)
-        response = requests.get(addr + CONFIG.API_GET_GLOBAL)
+        while True:
+            addr = random.choice(addr_list)
+            try:
+                response = requests.get(addr + CONFIG.API_GET_GLOBAL)
+                break
+            except requests.exceptions.ConnectionError:
+                log("requests", "fails to connect to" + addr)
+                continue
         data = response.json()
         new_task_name = data['seed_name']
         new_global_gen = data['generation']
@@ -83,7 +89,7 @@ def getLatest(addr_list):
     print("train for task<{}> of gen<{}>".format(task_name, global_gen))
     return data['weight'], data['preprocPara'], data['trainPara'], data['layerStructure']
 
-def pushTrained(size, lossDelta, weight, addr):
+def pushTrained(size, lossDelta, weight, addr_list):
     MLdata = {
         'stat' : {  'size' : size,
                     'lossDelta' : lossDelta,},
@@ -97,9 +103,16 @@ def pushTrained(size, lossDelta, weight, addr):
         'type' : 'localModelWeight',
         'plz_spread' : 1,
     }
-    requests.post(  addr + CONFIG.API_POST_LOCAL,
-                    json=data,
-                    )
+    while True:
+        addr = random.choice(addr_list)
+        try:
+            requests.post(addr + CONFIG.API_POST_LOCAL, json=data)
+            break
+        except requests.exceptions.ConnectionError:
+            log("requests", "fails to connect to" + addr)
+            continue
+
+
     # send to server
 
 class getDataSet(torch.utils.data.Dataset):
@@ -182,8 +195,7 @@ if __name__ == '__main__':
         size, lossDelta, weight = localTraining(myModel, localFeeder.fetch(fetch_size_per), trainPara)
         # print(myModel.state_dict())
         # send back to server
-        addr = random.choice(minerList)
-        pushTrained(size, lossDelta, weight, addr)
+        pushTrained(size, lossDelta, weight, minerList)
     # end of the life cycle =====================================
 
     print("local dataset training done!")

@@ -1,5 +1,5 @@
 from threading import Lock
-from DecentSpec.Common.utils import dict2tensor, difficultyCheck, hashValue, genTimestamp, tensor2dict, log
+from DecentSpec.Common.utils import curTime, dict2tensor, difficultyCheck, hashValue, genTimestamp, tensor2dict, log
 import DecentSpec.Common.config as CONFIG
 
 class Block:
@@ -24,7 +24,7 @@ class Block:
         self.base_global = base_weight
         self.new_global = Block.ewma_mix(self.local_list, self.base_global, para.alpha)
     
-    def get_block_dict(self, shrank=False, with_hash=True):
+    def get_block_dict(self, shrank, with_hash=True):
         shrank_block = self.__dict__.copy()
         if not with_hash:
             shrank_block.pop('hash')
@@ -67,16 +67,26 @@ class Block:
             averaged_weight[k] = (1-alpha) * base_tensor[k] + alpha * averaged_weight[k]
         return tensor2dict(averaged_weight)
 
+class FileLogger:
+    def __init__(self, name):
+        self.name = "DecentSpec/Test/log_{}.txt".format(name)
+    def log(self, tag, content):
+        with open(self.name, "a+") as f:
+            f.write("[{}] {} \n{}\n\n".format(curTime(), tag, content))
+
 class BlockChain:
-    def __init__(self):
+    def __init__(self, name):
         # self.lock = Lock()
+        self.name = name
         self.chain = []
+        self.logger = FileLogger(name)
 
     def create_genesis_block(self, para):
         genesis_block = Block([], CONFIG.GENESIS_HASH, 0, 0, para, para.seeder, None)
-        genesis_block.hash = genesis_block.compute_hash()
         genesis_block.new_global = para.init_weight
+        genesis_block.hash = genesis_block.compute_hash()
         self.chain.append(genesis_block)
+        self.logger.log("genesis", self.get_chain_print())
 
     def flush(self):
         # with self.lock:
@@ -85,6 +95,8 @@ class BlockChain:
     def replace(self, new_chain):
         # with self.lock:
             self.chain = new_chain
+            self.logger.log("replace", self.get_chain_print())
+
     
     def get_chain_list(self):
         # with self.lock:
@@ -92,10 +104,18 @@ class BlockChain:
             for block in self.chain:
                 chain_data.append(block.get_block_dict(shrank=False, with_hash=True))
             return chain_data
+    
+    def get_chain_print(self):
+        output = ""
+        for block in self.chain:
+            output +=  "{}({})[{}] ".format(block.hash[:8], block.miner[:5], len(block.local_list))
+        return output
 
     @property
     def last_block(self):
         # with self.lock:
+            if len(self.chain) == 0:
+                return None
             return self.chain[-1]
     
     @property
@@ -112,18 +132,19 @@ class BlockChain:
         # with self.lock:
             my_last = self.last_block
             # continuity check
-            if new_block.index != my_last.index + 1:
-                log("add block", "fails for index mismatch")
-                return False
             if new_block.prev_hash != my_last.hash:
-                log("add block", "fails for hash link mismatch")
+                log("validate block", "[fork alert] noncontinuous hash link")
+                return False
+            if new_block.index != my_last.index + 1:
+                log("validate block", "fails for index mismatch")
                 return False
             if new_block.hash != new_block.compute_hash():
-                log("add block", "fails for wrong hash")
+                log("validate block", "fails for wrong hash")
                 return False
             # difficulty check
             if (my_last.difficulty != new_block.difficulty) or (not difficultyCheck(new_block.hash, my_last.difficulty)):
-                log("add block", "fails for difficulty requirement")
+                log("validate block", "fails for difficulty requirement")
                 return False
             self.chain.append(new_block)
+            self.logger.log("grow", self.get_chain_print())
             return True

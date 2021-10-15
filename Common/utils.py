@@ -1,5 +1,6 @@
 import random
 import time
+from datetime import datetime
 import string
 import json
 import torch
@@ -13,12 +14,14 @@ class Intrpt:
         self.flag = False
         self.lock = Lock()
         self.desc = desc
-    def check_and_rst(self):
+    def check(self):
         with self.lock:
             ret = self.flag
-            self.flag = False
         return ret
-    def raise_intr(self):
+    def rst(self):
+        with self.lock:
+            self.flag = False
+    def set(self):
         with self.lock:
             self.flag = True
 
@@ -31,6 +34,9 @@ def genName(num=CONFIG.DEFAULT_NAME_LENGTH):
 
 def genTimestamp():
     return time.time()
+
+def curTime():
+    return str(datetime.fromtimestamp(genTimestamp()))
 
 def hashValue(content):
     strValue = json.dumps(content, sort_keys=True)

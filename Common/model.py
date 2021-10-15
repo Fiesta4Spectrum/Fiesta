@@ -3,10 +3,13 @@
 # so this model.py sharing is IMPOSSIBLE
 # TODO use TorchScript to serialize the model class
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 import DecentSpec.Common.config as CONFIG
+
+if CONFIG.REPRODUCIBILITY:
+    torch.manual_seed(32767)
 
 class SharedModel(nn.Module):
 

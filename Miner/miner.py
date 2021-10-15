@@ -13,12 +13,21 @@ from DecentSpec.Miner.para import Para
 
 # local field init ========================
 
+'''
+usage:
+    python -m DecentSpec.Miner.miner {1} {2} {3}
+    {1} - ip or domain with http
+    {2} - port 
+    {3} - POOL_MINE_THRESHOLD
+'''
+
 miner = Flask(__name__)
 myPort = "8000"
 myIp = "http://api.decentspec.org"
-if (len(sys.argv) == 3):
+if (len(sys.argv) == 4):
     myIp = sys.argv[1]
     myPort = sys.argv[2]
+    POOL_MINE_THRESHOLD = int(sys.argv[3])
 else:
     print("incorrect parameter")
     exit
@@ -27,7 +36,7 @@ myAddr = myIp + ":" + myPort
 myName = genName()
 print("***** NODE init, I am miner {} *****".format(myName))
 
-myChain = BlockChain()
+myChain = BlockChain(myName)
 myPool = Pool()
 powIntr = Intrpt('pow interrupt')
 
@@ -74,10 +83,13 @@ def spread_to_peers(local_model):
     
     log("new_local", "gonna share this local model")
     for peer in myPeers:
-        requests.post(
-            url = peer + CONFIG.API_POST_LOCAL,
-            json = local_model
-        )
+        try:
+            requests.post(
+                url = peer + CONFIG.API_POST_LOCAL,
+                json = local_model
+            )
+        except requests.exceptions.ConnectionError:
+            log("requests", "fails to connect to " + peer)
 
 @miner.route(CONFIG.API_GET_POOL, methods=['GET'])
 def get_pool():
@@ -122,7 +134,7 @@ def get_chain_simple():
     global myChain
     data = {
         'length' : myChain.size,
-        'latest_block' : myChain.last_block.get_block_dict(),
+        'latest_block' : myChain.last_block.get_block_dict(shrank = True),
     }
     return json.dumps(data)
 
@@ -139,10 +151,10 @@ def new_block():
             consensus()
         return "rejected", 400
     # if this new comer is accepted
-    powIntr.raise_intr()                                       # reset my pow
+    powIntr.set()                                       # reset my pow
     log("new_block", "new outcoming block accepted")
     myPool.remove(new_block.local_list)                  # remove the used local in the new block
-
+    powIntr.rst()
     return "added", 200
 
 # register thread setup ============================
@@ -156,10 +168,14 @@ def register():
         'name' : myName,
         'addr' : myAddr
     }
-    resp = requests.post(
-        url = CONFIG.SEED_ADDR + CONFIG.API_REGISTER,
-        json = data
-    )
+    try:
+        resp = requests.post(
+            url = CONFIG.SEED_ADDR + CONFIG.API_REGISTER,
+            json = data
+        )
+    except requests.exceptions.ConnectionError:
+        log("requests", "fails to connect to seed")
+        resp = None
     if valid_resp(resp):
         myPeers = set(resp.json()['list'])
         myPeers.remove(myAddr)
@@ -189,7 +205,7 @@ def mine():
             log("mine", "difficulty not set")
             continue
 
-        if myPool.size >= CONFIG.POOL_MINE_THRESHOLD:
+        if myPool.size >= POOL_MINE_THRESHOLD:
             log("mine", "enough local model, start pow")
             new_block = gen_candidate_block(myPool.get_pool_list())
             if new_block:
@@ -209,6 +225,10 @@ def gen_candidate_block(local_list):
     global myPara
     global myName
     
+    if powIntr.check():
+            log('pow', 'not allowed!')
+            return None
+
     new_block = Block(
         local_list,
         myChain.last_block.hash,
@@ -225,7 +245,7 @@ def gen_candidate_block(local_list):
     while not difficultyCheck(cur_hash, new_block.difficulty):
         new_block.nonce += 1
         cur_hash = new_block.compute_hash()
-        if powIntr.check_and_rst():
+        if powIntr.check():
             log('pow', 'interrupted!')
             return None
     new_block.hash = cur_hash
@@ -241,28 +261,35 @@ def consensus():
     max_len = myChain.size
 
     for peer in myPeers:
-        resp = requests.get(peer + CONFIG.API_GET_CHAIN_SIMPLE).json()  # get the short version
-        if resp['length'] > max_len:
-            resp = requests.get(peer + CONFIG.API_GET_CHAIN).json()     # get the full version
-            new_chain = list(map(
-                lambda x: extract_block_from_dict(x), 
-                resp['chain']
-                ))
-            if valid_chain(new_chain):
-                powIntr.raise_intr()
-                myChain.replace(new_chain)
-                myPool.flush()                                          # flush my pool
-                i_am = False
-                max_len = resp['length']
+        try:
+            resp = requests.get(peer + CONFIG.API_GET_CHAIN_SIMPLE).json()  # get the short version
+            if resp['length'] > max_len:
+                resp = requests.get(peer + CONFIG.API_GET_CHAIN).json()     # get the full version
+                new_chain = list(map(
+                    lambda x: extract_block_from_dict(x), 
+                    resp['chain']
+                    ))
+                if valid_chain(new_chain):
+                    powIntr.set()
+                    myChain.replace(new_chain)
+                    myPool.flush()                                          # flush my pool
+                    powIntr.rst()
+                    i_am = False
+                    max_len = resp['length']
+        except requests.exceptions.ConnectionError:
+            log("requests", "fails to connect to " + peer)
     return i_am
 
 def announce_new_block(new_block):
     global myPeers
     for peer in myPeers:
-        requests.post(
-            url = peer + CONFIG.API_POST_BLOCK,
-            json = new_block.get_block_dict(shrank=False, with_hash=True)
-        )
+        try:
+            requests.post(
+                url = peer + CONFIG.API_POST_BLOCK,
+                json = new_block.get_block_dict(shrank=False, with_hash=True)
+            )
+        except requests.exceptions.ConnectionError:
+            log("requests", "fails to connect to " + peer)
 
 # helper methods ===================================
 
@@ -302,6 +329,8 @@ def extract_block_from_dict(resp):
     return template
 
 def valid_resp(resp):
+    if resp == None:
+        return False
     return resp.status_code == requests.codes.ok
 
 def valid_seed(new_seed):
@@ -313,6 +342,8 @@ def valid_model(new_local):
     return True
 
 def valid_hash(new_block):
+    if new_block.index == 0:
+        return new_block.compute_hash() == new_block.hash
     return (new_block.compute_hash() == new_block.hash) and difficultyCheck(new_block.hash, new_block.difficulty)
 
 def valid_chain(new_chain):
@@ -325,8 +356,11 @@ def valid_chain(new_chain):
 
     prev_hash = CONFIG.GENESIS_HASH
     for block in new_chain:
-        if (not prev_hash == block.prev_hash) or (valid_hash(block)):
-            log("chain validation", "wrong hash for block #{}".format(block.index))
+        if not prev_hash == block.prev_hash:
+            log("chain validation", "hash link broke at block #{}".format(block.index))
+            return False
+        if not valid_hash(block):
+            log("chain validation", "wrong hash value for block #{}".format(block.index))
             return False
         prev_hash = block.hash
     return True

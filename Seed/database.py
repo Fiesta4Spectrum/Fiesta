@@ -10,6 +10,7 @@ import time
 import requests
 
 import DecentSpec.Common.config as CONFIG
+from DecentSpec.Common.utils import log
 
 class MinerDB:
     def __init__(self):
@@ -109,13 +110,16 @@ class RewardDB:
             fromwhom = 'nobody'
             longest_chain = []
             for miner in peers:
-                response = requests.get(miner + CONFIG.API_GET_CHAIN)
-                length = response.json()['length']
-                chain = response.json()['chain']
-                if length > current_len:
-                    current_len = length
-                    longest_chain = chain
-                    fromwhom = miner
+                try:
+                    response = requests.get(miner + CONFIG.API_GET_CHAIN)
+                    length = response.json()['length']
+                    chain = response.json()['chain']
+                    if length > current_len:
+                        current_len = length
+                        longest_chain = chain
+                        fromwhom = miner
+                except requests.exceptions.ConnectionError:
+                    log("requests", "fails to connect to " + miner)
             print("longest chain from {}".format(fromwhom))
             self.updateReward(longest_chain)
             print("============== Reward Database ===============")
