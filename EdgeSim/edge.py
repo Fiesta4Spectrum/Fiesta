@@ -7,16 +7,17 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from DecentSpec.Common.utils import log, save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
+from DecentSpec.Common.utils import curTime, log, save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
 from DecentSpec.Common.model import SharedModel
 import DecentSpec.Common.config as CONFIG
 '''
 usage:
     python -m DecentSpec.EdgeSim.edge {1} {2} {3}
-    {1} - train set
-    {2} - test set
-    {3} - size per round
+    {1} - file path (train or test)
+    {2} - size per round / "0" refers to training mode
 '''
+
+DATA_PARALLEL = 8
 
 task_name = None
 global_gen = -1
@@ -58,6 +59,11 @@ class DataFeeder:                   # emulate each round dataset feeder
     def haveData(self):
         return self.ctr < len(self.fullList)
         # does this emulator have further dataset
+    def reset(self):
+        self.ctr = 0
+    @property
+    def size(self):
+        return len(self.fullList)
 
 def fetchList(addr):
     response = requests.get(addr + CONFIG.API_GET_MINER)
@@ -86,7 +92,7 @@ def getLatest(addr_list):
     task_name = new_task_name
     global_gen = new_global_gen
     
-    print("train for task<{}> of gen<{}>".format(task_name, global_gen))
+    print("will perform on task<{}> of gen<{}>".format(task_name, global_gen))
     return data['weight'], data['preprocPara'], data['trainPara'], data['layerStructure']
 
 def pushTrained(size, lossDelta, weight, addr_list):
@@ -135,11 +141,11 @@ def localTraining(model, data, para):
     lossf = para['loss']
     opt = para['opt']
     size = len(data)
-    trainset = getDataSet(data)
-    trainLoader = torch.utils.data.DataLoader(  trainset,
+    trainSet = getDataSet(data)
+    trainLoader = torch.utils.data.DataLoader(  trainSet,
                                                 batch_size=batch,
-                                                shuffle = True,
-                                                num_workers=8)
+                                                shuffle=True,
+                                                num_workers=DATA_PARALLEL)
     lossFunc = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr = lrate)
 
@@ -163,24 +169,28 @@ def localTraining(model, data, para):
 
     return size, avg_loss_begin - avg_loss_end, save_weights_into_dict(model)
 
-if __name__ == '__main__':
+def localTester(model, data, para):
+    batch = para['batch']
+    lossf = para['loss']
+    size = len(data)
+    testSet = getDataSet(data)
+    testLoader = torch.utils.data.DataLoader( testSet,
+                                              batch_size=batch,
+                                              shuffle=True,
+                                              num_workers=DATA_PARALLEL)
+    lossFunc = nn.MSELoss()
+    with torch.no_grad():
+        model.eval()
+        loss_sum = 0.0
+        for i, data in enumerate(testLoader, 0):
+            inputs, truth = data
+            outputs = model(inputs)
+            loss = lossFunc(outputs, truth)
+            loss_sum += loss.item()
+    return loss_sum / i
 
-    print("***** NODE init, I am edge {} *****".format(myName))
-
-    # emulator local init =======================================
-    if len(sys.argv) == 4:
-        train_file = sys.argv[1]
-        test_file = sys.argv[2]
-        fetch_size_per = int(sys.argv[3])
-    else:
-        train_file = CONFIG.LOCAL_DATASET_FILE
-        test_file = CONFIG.LOCAL_DATASET_FILE
-        fetch_size_per = 10000
-    
-    print("***   will use trainFile<{}> and testFile<{}>   ***".format(train_file, test_file))
-
+def train_mode(train_file):
     localFeeder = DataFeeder(train_file)
-
     while localFeeder.haveData():
     # full life cycle of one round ==============================
         # miner communication
@@ -201,3 +211,47 @@ if __name__ == '__main__':
     print("local dataset training done!")
     sleep(10) # sleep 10s
     # TODO loss estimation and map visualization
+
+def test_mode(test_file):
+    localFeeder = DataFeeder(test_file)
+    while localFeeder.haveData():
+        # miner communication
+        minerList = fetchList(CONFIG.SEED_ADDR)
+        modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList)
+        # model init, should have built according to miner response
+        myModel = SharedModel(layerStructure)
+        load_weights_from_dict(myModel, modelWeights)
+        # data preprocessing setup
+        localFeeder.setPreProcess(preprocPara)
+        # local test
+        loss = localTester(myModel, localFeeder.fetch(localFeeder.size), trainPara)
+        print_loss(loss)
+        # TODO some test
+        localFeeder.reset()
+
+def print_loss(loss):
+    output_path = "DecentSpec/Test/test_loss_{}.txt".format(myName)
+    with open(output_path, "a+") as f:
+        f.write("[{}] [{} @ gen {}]\n{}\n\n".format(curTime(), task_name, global_gen, loss))
+
+
+# main =======================================================
+
+print("***** NODE init, I am edge {} *****".format(myName))
+
+if len(sys.argv) == 3:
+    file_path = sys.argv[1]
+    fetch_size_per = int(sys.argv[2])
+else:
+    file_path = CONFIG.LOCAL_DATASET_FILE
+    fetch_size_per = 10000
+
+if fetch_size_per == 0:
+    print("***   will use file <{}> perform TEST  ***".format(file_path))
+    test_mode(file_path)
+else:
+    print("***   will use File <{}> perform TRAIN  ***".format(file_path))
+    train_mode(file_path)
+
+
+

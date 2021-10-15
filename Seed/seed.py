@@ -33,7 +33,7 @@ trainPara = {
     'batch' : 10,
     'lr'    : 0.001,
     'opt'   : 'Adam',
-    'epoch' : 5,                            # local epoch Num
+    'epoch' : 10,                            # local epoch Num
     'loss'  : 'MSE',
 }
 

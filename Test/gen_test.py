@@ -77,11 +77,12 @@ for i in range(0, miner_num):
     shell_file.write("xterm -T miner{} -e python -m DecentSpec.Miner.miner http://api.decentspec.org {} {}&\n".format(i, 8000+i, pool_size))
 shell_file.write("sleep 1\n")
 
-test_file_path = "DecentSpec/Test/{}".format(test_file_path)
 for i in range(0, edge_num):
     train_file_path = "DecentSpec/Test/{}/train_{}_{}.dat".format(path, i, test_id)
-    shell_file.write("xterm -T edge{} -e python -m DecentSpec.EdgeSim.edge {} {} {}&\n".format(i, train_file_path, test_file_path, train_size_per_round))
+    shell_file.write("xterm -T edge{} -e python -m DecentSpec.EdgeSim.edge {} {}&\n".format(i, train_file_path, train_size_per_round))
 
+test_file_path = "DecentSpec/Test/{}".format(test_file_path)
+shell_file.write("xterm -T loss_tester -e python -m DecentSpec.EdgeSim.edge {} {}&\n".format(test_file_path, 0))            # train size zero refers to tester edge
 shell_file.write("cd DecentSpec/Test\n")
 shell_file.close()
 print("- done, plz run 'source run_test_{}.sh' ".format(test_id))
