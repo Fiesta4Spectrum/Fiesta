@@ -152,7 +152,7 @@ def new_block():
         return "rejected", 400
     # if this new comer is accepted
     powIntr.set()                                       # reset my pow
-    log("new_block", "new outcoming block accepted")
+    log("new_block", "new outcoming block #{} accepted".format(new_block.index))
     myPool.remove(new_block.local_list)                  # remove the used local in the new block
     powIntr.rst()
     return "added", 200
@@ -210,12 +210,12 @@ def mine():
             new_block = gen_candidate_block(myPool.get_pool_list())
             if new_block:
                 if consensus():
-                    myChain.valid_then_add(new_block)
-                    myPool.remove(new_block.local_list)
-                    announce_new_block(myChain.last_block)
-                    log("mine", "new block #{} is mined".format(new_block.index))
-                else:
-                    log("mine", "get a longer chain from else where")
+                    if myChain.valid_then_add(new_block):
+                        myPool.remove(new_block.local_list)
+                        announce_new_block(myChain.last_block)
+                        log("mine", "new block #{} is mined".format(new_block.index))
+                    else:
+                        log("mine", "self mined block #{} is discarded".format(new_block.index))
             else:
                 log("mine", "mine abort")
 
@@ -226,8 +226,8 @@ def gen_candidate_block(local_list):
     global myName
     
     if powIntr.check():
-            log('pow', 'not allowed!')
-            return None
+        log('pow', 'not allowed!')
+        return None
 
     new_block = Block(
         local_list,
@@ -272,6 +272,7 @@ def consensus():
                 if valid_chain(new_chain):
                     powIntr.set()
                     myChain.replace(new_chain)
+                    log("consensus", "get a longer chain from else where")
                     myPool.flush()                                          # flush my pool
                     powIntr.rst()
                     i_am = False

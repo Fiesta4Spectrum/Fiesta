@@ -108,7 +108,7 @@ class BlockChain:
     def get_chain_print(self):
         output = ""
         for block in self.chain:
-            output +=  "{}({})[{}] ".format(block.hash[:8], block.miner[:5], len(block.local_list))
+            output +=  "{}({}){}[{}] ".format(block.prev_hash[:5], block.miner[:5], block.hash[:5], len(block.local_list))
         return output
 
     @property
@@ -133,7 +133,7 @@ class BlockChain:
             my_last = self.last_block
             # continuity check
             if new_block.prev_hash != my_last.hash:
-                log("validate block", "[fork alert] noncontinuous hash link")
+                log("validate block", "noncontinuous hash link")
                 return False
             if new_block.index != my_last.index + 1:
                 log("validate block", "fails for index mismatch")
