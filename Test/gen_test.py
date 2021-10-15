@@ -67,22 +67,20 @@ for i in range(0, edge_num):
     train_files[i].close()
 print("- {} records per sub_train set".format(int(len(train_list)/edge_num)))
 
-train_size_per_round = int(len(train_list)/edge_num/round) + 1
-
 shell_file = open("run_test_{}.sh".format(test_id), "w")
 shell_file.write("cd ../..\n")
 shell_file.write("xterm -T seednode -e python -m DecentSpec.Seed.seed 5000 &\n")
 shell_file.write("sleep 1\n")
 for i in range(0, miner_num):
-    shell_file.write("xterm -T miner{} -e python -m DecentSpec.Miner.miner http://api.decentspec.org {} {}&\n".format(i, 8000+i, pool_size))
+    shell_file.write("xterm -T miner{} -e python -m DecentSpec.Miner.miner http://api.decentspec.org {} {} &\n".format(i, 8000+i, pool_size))
 shell_file.write("sleep 1\n")
 
 for i in range(0, edge_num):
     train_file_path = "DecentSpec/Test/{}/train_{}_{}.dat".format(path, i, test_id)
-    shell_file.write("xterm -T edge{} -e python -m DecentSpec.EdgeSim.edge {} {}&\n".format(i, train_file_path, train_size_per_round))
+    shell_file.write("xterm -T edge{} -e python -m DecentSpec.EdgeSim.edge train {} {} {} &\n".format(i, train_file_path, 0, round))         #  size zero refers to full set
 
 test_file_path = "DecentSpec/Test/{}".format(test_file_path)
-shell_file.write("xterm -T loss_tester -e python -m DecentSpec.EdgeSim.edge {} {}&\n".format(test_file_path, 0))            # train size zero refers to tester edge
+shell_file.write("xterm -T loss_tester -e python -m DecentSpec.EdgeSim.edge test {} {} {} &\n".format(test_file_path, 0, round))            #  size zero refers to full set
 shell_file.write("cd DecentSpec/Test\n")
 shell_file.close()
 print("- done, plz run 'source run_test_{}.sh' ".format(test_id))

@@ -13,8 +13,10 @@ import DecentSpec.Common.config as CONFIG
 '''
 usage:
     python -m DecentSpec.EdgeSim.edge {1} {2} {3}
-    {1} - file path (train or test)
-    {2} - size per round / "0" refers to training mode
+    {1} - mode: test or training
+    {2} - file path (train or test)
+    {3} - size per round / "0" refers to full set
+    {4} - round nums
 '''
 
 DATA_PARALLEL = 8
@@ -52,6 +54,8 @@ class DataFeeder:                   # emulate each round dataset feeder
             st_list.append(st_line)
         return st_list
     def fetch(self, size):
+        if size == 0:
+            return self._preproc(self.fullList)
         # return a dataset of UNCERTAIN size everytime
         partialList = self.fullList[self.ctr:self.ctr+size]
         self.ctr += size
@@ -59,15 +63,12 @@ class DataFeeder:                   # emulate each round dataset feeder
     def haveData(self):
         return self.ctr < len(self.fullList)
         # does this emulator have further dataset
-    def reset(self):
-        self.ctr = 0
     @property
     def size(self):
         return len(self.fullList)
 
 def fetchList(addr):
     response = requests.get(addr + CONFIG.API_GET_MINER)
-    print(response.json())
     return response.json()['peers']
 
 def getLatest(addr_list):
@@ -190,9 +191,13 @@ def localTester(model, data, para):
     return loss_sum / i
 
 def train_mode(train_file):
+    global fetch_size_per
+    global rounds
+
     localFeeder = DataFeeder(train_file)
-    while localFeeder.haveData():
+    while localFeeder.haveData() and (rounds > 0):
     # full life cycle of one round ==============================
+        rounds -= 1
         # miner communication
         minerList = fetchList(CONFIG.SEED_ADDR)
         modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList)
@@ -209,12 +214,15 @@ def train_mode(train_file):
     # end of the life cycle =====================================
 
     print("local dataset training done!")
-    sleep(10) # sleep 10s
     # TODO loss estimation and map visualization
 
 def test_mode(test_file):
+    global fetch_size_per
+    global rounds
+
     localFeeder = DataFeeder(test_file)
-    while localFeeder.haveData():
+    while localFeeder.haveData() and (rounds > 0):
+        rounds -= 1
         # miner communication
         minerList = fetchList(CONFIG.SEED_ADDR)
         modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList)
@@ -224,10 +232,9 @@ def test_mode(test_file):
         # data preprocessing setup
         localFeeder.setPreProcess(preprocPara)
         # local test
-        loss = localTester(myModel, localFeeder.fetch(localFeeder.size), trainPara)
+        loss = localTester(myModel, localFeeder.fetch(fetch_size_per), trainPara)
         print_loss(loss)
         # TODO some test
-        localFeeder.reset()
 
 def print_loss(loss):
     output_path = "DecentSpec/Test/test_loss_{}.txt".format(myName)
@@ -239,19 +246,25 @@ def print_loss(loss):
 
 print("***** NODE init, I am edge {} *****".format(myName))
 
-if len(sys.argv) == 3:
-    file_path = sys.argv[1]
-    fetch_size_per = int(sys.argv[2])
+fetch_size_per = 0
+rounds = 0
+mode = "none"
+if len(sys.argv) == 5:
+    mode = sys.argv[1]
+    file_path = sys.argv[2]
+    fetch_size_per = int(sys.argv[3])
+    rounds = int(sys.argv[4])
 else:
-    file_path = CONFIG.LOCAL_DATASET_FILE
-    fetch_size_per = 10000
+    print("unrecognized command")
 
-if fetch_size_per == 0:
+if mode == "test":
     print("***   will use file <{}> perform TEST  ***".format(file_path))
     test_mode(file_path)
-else:
+elif mode == "train": 
     print("***   will use File <{}> perform TRAIN  ***".format(file_path))
     train_mode(file_path)
+else:
+    print("unrecognized command")
 
 
 

@@ -207,7 +207,7 @@ def mine():
 
         if myPool.size >= POOL_MINE_THRESHOLD:
             log("mine", "enough local model, start pow")
-            new_block = gen_candidate_block(myPool.get_pool_list())
+            new_block = gen_candidate_block(myPool.get_pool_list()[0:POOL_MINE_THRESHOLD])
             if new_block:
                 if consensus():
                     if myChain.valid_then_add(new_block):

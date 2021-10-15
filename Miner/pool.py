@@ -41,11 +41,11 @@ class Pool:
                 self.pool
                 ))
                                             # return List<Dict> from Set<JSON>
+    # TODO arrival sequency is totally lost here because we use set()
+    # try to retain the arrival sequency in some way
     
     @property
     def size(self):
         # with self.lock:
             return len(self.pool)
 
-# TODO use a two layer structure
-# local model is companied with its hash

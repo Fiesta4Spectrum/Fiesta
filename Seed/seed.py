@@ -38,11 +38,11 @@ trainPara = {
 }
 
 Para = {
-    'alpha' : 1,
+    'alpha' : CONFIG.ALPHA,
     'preprocPara' : preprocPara,
     'trainPara' : trainPara,
     'layerStructure' : layerStructure,
-    'difficulty' : 3,
+    'difficulty' : CONFIG.DIFFICULTY,
 } 
 
 rewardRecord = RewardDB(myMembers, Para)

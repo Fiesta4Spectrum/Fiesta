@@ -70,9 +70,14 @@ class Block:
 class FileLogger:
     def __init__(self, name):
         self.name = "DecentSpec/Test/log_{}.txt".format(name)
+        self.zero = 0
     def log(self, tag, content):
         with open(self.name, "a+") as f:
-            f.write("[{}] {} \n{}\n\n".format(curTime(), tag, content))
+            f.write("{} [{}] \n{}\n\n".format(genTimestamp() - self.zero, tag, content))
+    def calibrate(self):
+        with open(self.name, "a+") as f:
+            f.write("start from: {}\n\n".format(curTime()))
+        self.zero = genTimestamp()
 
 class BlockChain:
     def __init__(self, name):
@@ -86,6 +91,7 @@ class BlockChain:
         genesis_block.new_global = para.init_weight
         genesis_block.hash = genesis_block.compute_hash()
         self.chain.append(genesis_block)
+        self.logger.calibrate()
         self.logger.log("genesis", self.get_chain_print())
 
     def flush(self):

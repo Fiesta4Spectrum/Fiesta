@@ -24,6 +24,9 @@ BLOCK_GEN_INTERVAL = 1      # seconds between mining
 SEED_CHAIN_SCAN_INTERVAL = 20     # compute reward per 20s
 SEED_LEASING_COUNTDOWN = 1    # rate of leasing timer reduction
 SEED_LEASING_INIT = 20
+# SEED content
+DIFFICULTY = 3
+ALPHA = 0.5
 
 # API related
 
