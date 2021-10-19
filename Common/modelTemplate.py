@@ -12,11 +12,11 @@ import DecentSpec.Common.config as CONFIG
 if CONFIG.REPRODUCIBILITY:
     torch.manual_seed(32767)
 
-class SharedModel(nn.Module):
+class FNNModel(nn.Module):
 
     # parameter-related operation is defined in init as nn
     def __init__(self, nlist = SEED.DEFAULT_NN_STRUCTURE):
-        super(SharedModel, self).__init__()
+        super(FNNModel, self).__init__()
         # input of network is a 2-dimensional feature(latitude, longitude)
         self.hidden = nn.ModuleList()
         self.hidden_size = len(nlist) - 2

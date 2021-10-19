@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from DecentSpec.Common.utils import curTime, print_log, save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
-from DecentSpec.Common.model import SharedModel
+from DecentSpec.Common.modelTemplate import FNNModel
 import DecentSpec.Common.config as CONFIG
 '''
 usage:
@@ -204,7 +204,7 @@ def train_mode(train_file):
         minerList = fetchList(CONFIG.SEED_ADDR)
         modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList)
         # model init, should have built according to miner response
-        myModel = SharedModel(layerStructure)
+        myModel = FNNModel(layerStructure)
         load_weights_from_dict(myModel, modelWeights)
         # data preprocessing setup
         localFeeder.setPreProcess(preprocPara)
@@ -229,7 +229,7 @@ def test_mode(test_file):
         minerList = fetchList(CONFIG.SEED_ADDR)
         modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList)
         # model init, should have built according to miner response
-        myModel = SharedModel(layerStructure)
+        myModel = FNNModel(layerStructure)
         load_weights_from_dict(myModel, modelWeights)
         # data preprocessing setup
         localFeeder.setPreProcess(preprocPara)

@@ -6,7 +6,7 @@ from flask import Flask, request
 import threading
 
 from DecentSpec.Seed.database import MinerDB, RewardDB
-from DecentSpec.Common.model import SharedModel # TODO 
+from DecentSpec.Common.modelTemplate import FNNModel 
 from DecentSpec.Common.utils import print_log, save_weights_into_dict, genName
 import DecentSpec.Common.config as CONFIG
 from DecentSpec.Common.tasks import TV_CHANNEL_TASK as SEED
@@ -23,7 +23,7 @@ myMembers = MinerDB()
 
 layerStructure = SEED.DEFAULT_NN_STRUCTURE
 seedName = "TV_Channel_regression_v1"    # name of this seed
-seedModel = SharedModel(layerStructure)
+seedModel = FNNModel(layerStructure)
 
 Para = {
     'alpha' : SEED.ALPHA,
@@ -68,7 +68,7 @@ def flush():
     global myMembers
     global seedModel
     global Para
-    seedModel = SharedModel(layerStructure)
+    seedModel = FNNModel(layerStructure)
     globalWeight = save_weights_into_dict(seedModel)
     post_object = {
         'name' : seedName,
