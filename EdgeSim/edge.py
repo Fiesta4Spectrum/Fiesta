@@ -123,26 +123,28 @@ def pushTrained(size, lossDelta, weight, addr_list):
     # send to server
 
 class getDataSet(torch.utils.data.Dataset):
-    def __init__(self, myList):
+    def __init__(self, myList, layerStructure):
         self.myList = myList
+        self.inputSize = layerStructure[0]
+        self.outputSize = layerStructure[-1]
 
     def __getitem__(self, index):
         row = self.myList[index]
-        gps_tensor = torch.tensor([row[0], row[1]])
-        power_tensor = torch.tensor([row[2]])
-        return gps_tensor, power_tensor
+        input_tensor = torch.tensor(row[:self.inputSize])
+        output_tensor = torch.tensor(row[self.inputSize: self.inputSize + self.outputSize])
+        return input_tensor, output_tensor
 
     def __len__(self):
         return len(self.myList) 
 
-def localTraining(model, data, para):
+def localTraining(model, data, para, layerStructure):
     batch = para['batch']
     lrate = para['lr']
     epoch = para['epoch']
     lossf = para['loss']
     opt = para['opt']
     size = len(data)
-    trainSet = getDataSet(data)
+    trainSet = getDataSet(data, layerStructure)
     trainLoader = torch.utils.data.DataLoader(  trainSet,
                                                 batch_size=batch,
                                                 shuffle=True,
@@ -170,11 +172,11 @@ def localTraining(model, data, para):
 
     return size, avg_loss_begin - avg_loss_end, save_weights_into_dict(model)
 
-def localTester(model, data, para):
+def localTester(model, data, para, layerStructure):
     batch = para['batch']
     lossf = para['loss']
     size = len(data)
-    testSet = getDataSet(data)
+    testSet = getDataSet(data, layerStructure)
     testLoader = torch.utils.data.DataLoader( testSet,
                                               batch_size=batch,
                                               shuffle=True,
@@ -207,7 +209,7 @@ def train_mode(train_file):
         # data preprocessing setup
         localFeeder.setPreProcess(preprocPara)
         # local training
-        size, lossDelta, weight = localTraining(myModel, localFeeder.fetch(fetch_size_per), trainPara)
+        size, lossDelta, weight = localTraining(myModel, localFeeder.fetch(fetch_size_per), trainPara, layerStructure)
         # print(myModel.state_dict())
         # send back to server
         pushTrained(size, lossDelta, weight, minerList)
@@ -232,7 +234,7 @@ def test_mode(test_file):
         # data preprocessing setup
         localFeeder.setPreProcess(preprocPara)
         # local test
-        loss = localTester(myModel, localFeeder.fetch(fetch_size_per), trainPara)
+        loss = localTester(myModel, localFeeder.fetch(fetch_size_per), trainPara, layerStructure)
         print_loss(loss)
         # TODO some test
 

@@ -3,14 +3,12 @@ LOG_POOL = False
 LOG_CHAIN = True
 
 # COMMON 
-DEFAULT_NN_STRUCTURE = [2,50,50,50,1]
 DEFAULT_NAME_LENGTH = 10
 SEED_ADDR = "http://api.decentspec.org:5000"
 POW_ENABLE = True # false will disable the difficulty check which we do not care hash anymore
 REPRODUCIBILITY = True
 
 # @EDGE_SIM related 
-RANDOM_EDGE = True # do we need to random send?
 LOCAL_DATASET_FILE = "DecentSpec/Dataset/GPS-power.dat"     # data structure 
 EDGE_TRAIN_INTERVAL = 1    # seconds between two round
 
@@ -30,7 +28,6 @@ SEED_LEASING_COUNTDOWN = 1    # rate of leasing timer reduction
 SEED_LEASING_INIT = 20
 # SEED content
 DIFFICULTY = 3
-ALPHA = 0.5
 
 # API related
 

@@ -3,10 +3,11 @@ import random
 import string
 import os
 import math
+import DecentSpec.Common.config as CONFIG
 
 '''
 useage:
-    python gen_test.py {1} {2} {3} {4} {5} {6} {7]}
+    python gen_test.py {1} {2} {3} {4} {5} {6}
     {1} - int, num of miner
     {2} - int, num of edge device
     {3} - float, percentage of test set 
@@ -27,7 +28,6 @@ def genName(num=5):
     return salt
 
 def genShell(tag):
-
     path = "test_{}".format(tag)
 
     shell_file = open("run_test_{}.sh".format(test_id), "w")
@@ -35,14 +35,14 @@ def genShell(tag):
     shell_file.write("xterm -T seednode -e python -m DecentSpec.Seed.seed 5000 &\n")
     shell_file.write("sleep 1\n")
     for i in range(0, miner_num):
-        shell_file.write("xterm -T miner{} -e python -m DecentSpec.Miner.miner http://api.decentspec.org {} {} &\n".format(i, 8000+i, pool_size))
+        shell_file.write("xterm -T miner{} -e python -m DecentSpec.Miner.miner {} {} {} &\n".format(i, CONFIG.SEED_ADDR, 8000+i, pool_size))
     shell_file.write("sleep 1\n")
 
     for i in range(0, edge_num):
-        train_file_path = "DecentSpec/Test/{}/train_{}.dat".format(path, i, tag)
+        train_file_path = "DecentSpec/Test/{}/train_{}.dat".format(path, i)
         shell_file.write("xterm -T edge{} -e python -m DecentSpec.EdgeSim.edge train {} {} {} &\n".format(i, train_file_path, 0, round))         #  size zero refers to full set
 
-    test_file_path = "DecentSpec/Test/{}/test.dat".format(path, tag)
+    test_file_path = "DecentSpec/Test/{}/test.dat".format(path)
     shell_file.write("xterm -T loss_tester -e python -m DecentSpec.EdgeSim.edge test {} {} {} &\n".format(test_file_path, 0, round))            #  size zero refers to full set
     shell_file.write("cd DecentSpec/Test\n")
     shell_file.close()
