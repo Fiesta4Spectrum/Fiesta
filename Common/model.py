@@ -6,7 +6,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import DecentSpec.Common.task as SEED
+import DecentSpec.Common.tasks as SEED
+import DecentSpec.Common.config as CONFIG
 
 if CONFIG.REPRODUCIBILITY:
     torch.manual_seed(32767)

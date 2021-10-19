@@ -28,7 +28,7 @@ def genName(num=5):
     return salt
 
 def genShell(tag):
-    path = "test_{}".format(tag)
+    dataset_path = "test_{}".format(tag)
 
     shell_file = open("run_test_{}.sh".format(test_id), "w")
     shell_file.write("cd ../..\n")
@@ -39,10 +39,10 @@ def genShell(tag):
     shell_file.write("sleep 1\n")
 
     for i in range(0, edge_num):
-        train_file_path = "DecentSpec/Test/{}/train_{}.dat".format(path, i)
+        train_file_path = "DecentSpec/Test/{}/train_{}.dat".format(dataset_path, i)
         shell_file.write("xterm -T edge{} -e python -m DecentSpec.EdgeSim.edge train {} {} {} &\n".format(i, train_file_path, 0, round))         #  size zero refers to full set
 
-    test_file_path = "DecentSpec/Test/{}/test.dat".format(path)
+    test_file_path = "DecentSpec/Test/{}/test.dat".format(dataset_path)
     shell_file.write("xterm -T loss_tester -e python -m DecentSpec.EdgeSim.edge test {} {} {} &\n".format(test_file_path, 0, round))            #  size zero refers to full set
     shell_file.write("cd DecentSpec/Test\n")
     shell_file.close()
@@ -72,8 +72,8 @@ print("- dataset generation policy: " + policy)
 
 if policy != "muji":
 
-    path = "test_{}".format(test_id)
-    os.mkdir(path)
+    dataset_path = "test_{}".format(test_id)
+    os.mkdir(dataset_path)
 
     full_file = open(FULL_DATASET, "r")
     full_list = full_file.readlines()
@@ -81,7 +81,7 @@ if policy != "muji":
     print("- {} records in total".format(len(full_list)))
 
     # ========== gen global test set
-    test_file = open("{}/test.dat".format(path), "w")
+    test_file = open("{}/test.dat".format(dataset_path), "w")
     test_list = random.sample(full_list, int(len(full_list) * test_percent))
     test_file.writelines(test_list)
     test_file.close()
@@ -100,7 +100,7 @@ if policy != "muji":
     # ========== create train set files
     train_files = []
     for i in range(0, edge_num):
-        new_path = "{}/train_{}.dat".format(path, i)
+        new_path = "{}/train_{}.dat".format(dataset_path, i)
         new_file = open(new_path, "w")
         train_files.append(new_file)
 

@@ -9,7 +9,7 @@ from DecentSpec.Seed.database import MinerDB, RewardDB
 from DecentSpec.Common.model import SharedModel # TODO 
 from DecentSpec.Common.utils import print_log, save_weights_into_dict, genName
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.task import TV_CHANNEL_TASK as SEED
+from DecentSpec.Common.tasks import TV_CHANNEL_TASK as SEED
 
 seed = Flask(__name__)
 
