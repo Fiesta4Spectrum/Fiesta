@@ -9,7 +9,8 @@ from DecentSpec.Seed.database import MinerDB, RewardDB
 from DecentSpec.Common.modelTemplate import FNNModel 
 from DecentSpec.Common.utils import print_log, save_weights_into_dict, genName
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.tasks import TV_CHANNEL_TASK as SEED
+# from DecentSpec.Common.tasks import TV_CHANNEL_TASK as SEED
+from DecentSpec.Common.tasks import ANOMALY_DETECTION_TASK as SEED
 
 seed = Flask(__name__)
 
@@ -25,15 +26,15 @@ layerStructure = SEED.DEFAULT_NN_STRUCTURE
 seedName = "TV_Channel_regression_v1"    # name of this seed
 seedModel = FNNModel(layerStructure)
 
-Para = {
+myPara = {
     'alpha' : SEED.ALPHA,
     'preprocPara' : SEED.PREPROC_PARA,
     'trainPara' : SEED.TRAIN_PARA,
     'layerStructure' : layerStructure,
-    'difficulty' : CONFIG.DIFFICULTY,
+    'difficulty' : SEED.DIFFICULTY,
 } 
 
-rewardRecord = RewardDB(myMembers, Para)
+rewardRecord = RewardDB(myMembers, myPara)
 
 # register related api ===================================
 
@@ -45,14 +46,14 @@ def get_peers():
 @seed.route(CONFIG.API_REGISTER, methods=['POST'])
 def reg_miner():
     global myMembers
-    global Para
+    global myPara
     reg_data = request.get_json()
     myMembers.regNew(reg_data["name"], reg_data["addr"])
     ret = {
         'name' : seedName,
         'from' : myName,
         'seedWeight' : save_weights_into_dict(seedModel),
-        'para' : Para,
+        'para' : myPara,
         'list' : myMembers.getList(),
     }
     # print(ret)
@@ -67,14 +68,14 @@ def reg_miner():
 def flush():   
     global myMembers
     global seedModel
-    global Para
+    global myPara
     seedModel = FNNModel(layerStructure)
     globalWeight = save_weights_into_dict(seedModel)
     post_object = {
         'name' : seedName,
         'from' : myName,
         'seedWeight' : globalWeight,
-        'para' : Para,
+        'para' : myPara,
     }
     for addr in myMembers.getList():
         try: 

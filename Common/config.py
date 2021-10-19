@@ -9,28 +9,21 @@ POW_ENABLE = True # false will disable the difficulty check which we do not care
 REPRODUCIBILITY = True
 
 # @EDGE_SIM related 
-LOCAL_DATASET_FILE = "DecentSpec/Dataset/GPS-power.dat"     # data structure 
 EDGE_TRAIN_INTERVAL = 1    # seconds between two round
 
 # @MINER related 
 MINER_REG_INTERVAL = 19
-UNAMED_POOL = True
 GENESIS_HASH = "genesis_hash"
-CHAIN_LOGGER = True
-
+BLOCK_GEN_INTERVAL = 1      # seconds between mining
 # POOL_MINE_THRESHOLD = 3     # num of local models before mining
                                 # get mine threshold at runtime for easy test
-BLOCK_GEN_INTERVAL = 1      # seconds between mining
 
 # @SEED server related 
 SEED_CHAIN_SCAN_INTERVAL = 20     # compute reward per 20s
 SEED_LEASING_COUNTDOWN = 1    # rate of leasing timer reduction
 SEED_LEASING_INIT = 20
-# SEED content
-DIFFICULTY = 3
 
 # API related
-
 API_POST_LOCAL = '/new_transaction'
 API_GET_GLOBAL = '/global_model'
 

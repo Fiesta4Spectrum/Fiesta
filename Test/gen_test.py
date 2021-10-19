@@ -3,7 +3,7 @@ import random
 import string
 import os
 import math
-import DecentSpec.Common.config as CONFIG
+import Common.tasks as TASKS
 
 '''
 useage:
@@ -21,7 +21,9 @@ useage:
             "muji"  - use the pre-generated, fixed "test_muji" dataset
 '''
 
-FULL_DATASET = "../Dataset/GPS-power.dat"
+# FULL_DATASET = TASKS.TV_CHANNEL_TASK.FULL_FILE_PATH
+FULL_DATASET = TASKS.ANOMALY_DETECTION_TASK.FULL_FILE_PATH
+MY_IP = "http://api.decentspec.org"
 
 def genName(num=5):
     salt = ''.join(random.sample(string.ascii_letters + string.digits, num))
@@ -35,7 +37,7 @@ def genShell(tag):
     shell_file.write("xterm -T seednode -e python -m DecentSpec.Seed.seed 5000 &\n")
     shell_file.write("sleep 1\n")
     for i in range(0, miner_num):
-        shell_file.write("xterm -T miner{} -e python -m DecentSpec.Miner.miner {} {} {} &\n".format(i, CONFIG.SEED_ADDR, 8000+i, pool_size))
+        shell_file.write("xterm -T miner{} -e python -m DecentSpec.Miner.miner {} {} {} &\n".format(i, MY_IP, 8000+i, pool_size))
     shell_file.write("sleep 1\n")
 
     for i in range(0, edge_num):

@@ -6,7 +6,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import DecentSpec.Common.tasks as SEED
 import DecentSpec.Common.config as CONFIG
 
 if CONFIG.REPRODUCIBILITY:
@@ -15,7 +14,7 @@ if CONFIG.REPRODUCIBILITY:
 class FNNModel(nn.Module):
 
     # parameter-related operation is defined in init as nn
-    def __init__(self, nlist = SEED.DEFAULT_NN_STRUCTURE):
+    def __init__(self, nlist):
         super(FNNModel, self).__init__()
         # input of network is a 2-dimensional feature(latitude, longitude)
         self.hidden = nn.ModuleList()

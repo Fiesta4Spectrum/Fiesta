@@ -22,15 +22,14 @@ usage:
 '''
 
 miner = Flask(__name__)
-myPort = "8000"
-myIp = "http://api.decentspec.org"
+myPort = None
+myIp = None
 if (len(sys.argv) == 4):
     myIp = sys.argv[1]
     myPort = sys.argv[2]
     POOL_MINE_THRESHOLD = int(sys.argv[3])
 else:
     print("incorrect parameter")
-    print(__doc__)
     exit
 
 myAddr = myIp + ":" + myPort
@@ -212,7 +211,10 @@ def mine():
 
     while True:
         time.sleep(CONFIG.BLOCK_GEN_INTERVAL)
-        if myPara == None or myChain.difficulty < 1:
+        if myPara == None:
+            print_log("mine", "not registered yet")
+            continue
+        if myChain.difficulty < 1:
             print_log("mine", "difficulty not set")
             continue
 
