@@ -10,7 +10,7 @@ import time
 import requests
 
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import log
+from DecentSpec.Common.utils import print_log
 
 class MinerDB:
     def __init__(self):
@@ -119,7 +119,7 @@ class RewardDB:
                         longest_chain = chain
                         fromwhom = miner
                 except requests.exceptions.ConnectionError:
-                    log("requests", "fails to connect to " + miner)
+                    print_log("requests", "fails to connect to " + miner)
             print("longest chain from {}".format(fromwhom))
             self.updateReward(longest_chain)
             print("============== Reward Database ===============")

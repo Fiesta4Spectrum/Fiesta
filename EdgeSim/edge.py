@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from DecentSpec.Common.utils import curTime, log, save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
+from DecentSpec.Common.utils import curTime, print_log, save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
 from DecentSpec.Common.model import SharedModel
 import DecentSpec.Common.config as CONFIG
 '''
@@ -81,7 +81,7 @@ def getLatest(addr_list):
                 response = requests.get(addr + CONFIG.API_GET_GLOBAL)
                 break
             except requests.exceptions.ConnectionError:
-                log("requests", "fails to connect to" + addr)
+                print_log("requests", "fails to connect to" + addr)
                 continue
         data = response.json()
         new_task_name = data['seed_name']
@@ -116,7 +116,7 @@ def pushTrained(size, lossDelta, weight, addr_list):
             requests.post(addr + CONFIG.API_POST_LOCAL, json=data)
             break
         except requests.exceptions.ConnectionError:
-            log("requests", "fails to connect to" + addr)
+            print_log("requests", "fails to connect to" + addr)
             continue
 
 

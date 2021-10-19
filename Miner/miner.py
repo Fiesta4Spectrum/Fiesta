@@ -6,8 +6,8 @@ import time
 from flask import Flask, request
 
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import difficultyCheck, genName, genTimestamp, log, Intrpt
-from DecentSpec.Miner.blockChain import Block, BlockChain
+from DecentSpec.Common.utils import difficultyCheck, genName, genTimestamp, hashValue, print_log, Intrpt
+from DecentSpec.Miner.blockChain import Block, BlockChain, FileLogger
 from DecentSpec.Miner.pool import Pool
 from DecentSpec.Miner.para import Para
 
@@ -30,14 +30,17 @@ if (len(sys.argv) == 4):
     POOL_MINE_THRESHOLD = int(sys.argv[3])
 else:
     print("incorrect parameter")
+    print(__doc__)
     exit
 
 myAddr = myIp + ":" + myPort
 myName = genName()
 print("***** NODE init, I am miner {} *****".format(myName))
 
-myChain = BlockChain(myName)
-myPool = Pool()
+myLogger = FileLogger(myName)
+myLogger.calibrate()
+myChain = BlockChain(myLogger)
+myPool = Pool(myLogger)
 powIntr = Intrpt('pow interrupt')
 
 myPeers = None      # peer miner list
@@ -54,7 +57,7 @@ def reseed():
     
     seed = request.get_json()
     if not valid_seed(seed):
-        log("reseed", "invalid seed")
+        print_log("reseed", "invalid seed")
         return "invalid", 400
     myPool.flush()
     myChain.flush()
@@ -67,21 +70,29 @@ def new_local():
     global myPool
 
     SPREAD_FLAG = 'plz_spread'
+    LOCAL_HASH_FIELD = 'hash'
+
     resp = request.get_json()
     if not valid_model(resp):
-        log('new_local', 'invalid local model received')
+        print_log('new_local', 'invalid local model received')
         return "Invalid local model", 400
+    # add the model hash field to this local weight package
     if SPREAD_FLAG in resp:
         resp.pop(SPREAD_FLAG)                               # avoid useless repeat spread
+        if not LOCAL_HASH_FIELD in resp:
+            resp[LOCAL_HASH_FIELD] = hashValue(resp)
         thread = Thread(target=spread_to_peers, args=[resp])
         thread.start()
+    else:
+        if not LOCAL_HASH_FIELD in resp:
+            resp[LOCAL_HASH_FIELD] = hashValue(resp)
     myPool.add(resp)
     return "new local model received", 201
 
 def spread_to_peers(local_model):
     global myPeers
     
-    log("new_local", "gonna share this local model")
+    print_log("new_local", "gonna share this local model")
     for peer in myPeers:
         try:
             requests.post(
@@ -89,7 +100,7 @@ def spread_to_peers(local_model):
                 json = local_model
             )
         except requests.exceptions.ConnectionError:
-            log("requests", "fails to connect to " + peer)
+            print_log("requests", "fails to connect to " + peer)
 
 @miner.route(CONFIG.API_GET_POOL, methods=['GET'])
 def get_pool():
@@ -146,13 +157,13 @@ def new_block():
 
     new_block = extract_block_from_dict(request.get_json())
     if not myChain.valid_then_add(new_block):
-        log("new_block", "new outcoming block get discarded")
+        print_log("new_block", "new outcoming block get discarded")
         if new_block.index > myChain.size and new_block.seed_name == myPara.seed_name:
             consensus()
         return "rejected", 400
     # if this new comer is accepted
     powIntr.set()                                       # reset my pow
-    log("new_block", "new outcoming block #{} accepted".format(new_block.index))
+    print_log("new_block", "new outcoming block #{} accepted".format(new_block.index))
     myPool.remove(new_block.local_list)                  # remove the used local in the new block
     powIntr.rst()
     return "added", 200
@@ -174,7 +185,7 @@ def register():
             json = data
         )
     except requests.exceptions.ConnectionError:
-        log("requests", "fails to connect to seed")
+        print_log("requests", "fails to connect to seed")
         resp = None
     if valid_resp(resp):
         myPeers = set(resp.json()['list'])
@@ -184,7 +195,7 @@ def register():
             myChain.create_genesis_block(myPara)
     else:
         # TODO when http get fails
-        log("register", "seed server not available")
+        print_log("register", "seed server not available")
         pass
 
 
@@ -202,22 +213,22 @@ def mine():
     while True:
         time.sleep(CONFIG.BLOCK_GEN_INTERVAL)
         if myPara == None or myChain.difficulty < 1:
-            log("mine", "difficulty not set")
+            print_log("mine", "difficulty not set")
             continue
 
         if myPool.size >= POOL_MINE_THRESHOLD:
-            log("mine", "enough local model, start pow")
-            new_block = gen_candidate_block(myPool.get_pool_list()[0:POOL_MINE_THRESHOLD])
+            print_log("mine", "enough local model, start pow")
+            new_block = gen_candidate_block(myPool.get_pool_list(POOL_MINE_THRESHOLD))
             if new_block:
                 if consensus():
                     if myChain.valid_then_add(new_block):
                         myPool.remove(new_block.local_list)
                         announce_new_block(myChain.last_block)
-                        log("mine", "new block #{} is mined".format(new_block.index))
+                        print_log("mine", "new block #{} is mined".format(new_block.index))
                     else:
-                        log("mine", "self mined block #{} is discarded".format(new_block.index))
+                        print_log("mine", "self mined block #{} is discarded".format(new_block.index))
             else:
-                log("mine", "mine abort")
+                print_log("mine", "mine abort")
 
 def gen_candidate_block(local_list):
     global powIntr
@@ -226,7 +237,7 @@ def gen_candidate_block(local_list):
     global myName
     
     if powIntr.check():
-        log('pow', 'not allowed!')
+        print_log('pow', 'not allowed!')
         return None
 
     new_block = Block(
@@ -246,7 +257,7 @@ def gen_candidate_block(local_list):
         new_block.nonce += 1
         cur_hash = new_block.compute_hash()
         if powIntr.check():
-            log('pow', 'interrupted!')
+            print_log('pow', 'interrupted!')
             return None
     new_block.hash = cur_hash
 
@@ -272,13 +283,13 @@ def consensus():
                 if valid_chain(new_chain):
                     powIntr.set()
                     myChain.replace(new_chain)
-                    log("consensus", "get a longer chain from else where")
+                    print_log("consensus", "get a longer chain from else where")
                     myPool.flush()                                          # flush my pool
                     powIntr.rst()
                     i_am = False
                     max_len = resp['length']
         except requests.exceptions.ConnectionError:
-            log("requests", "fails to connect to " + peer)
+            print_log("requests", "fails to connect to " + peer)
     return i_am
 
 def announce_new_block(new_block):
@@ -287,10 +298,10 @@ def announce_new_block(new_block):
         try:
             requests.post(
                 url = peer + CONFIG.API_POST_BLOCK,
-                json = new_block.get_block_dict(shrank=False, with_hash=True)
+                json = new_block.get_block_dict(shrank=False)
             )
         except requests.exceptions.ConnectionError:
-            log("requests", "fails to connect to " + peer)
+            print_log("requests", "fails to connect to " + peer)
 
 # helper methods ===================================
 
@@ -316,14 +327,16 @@ def extract_block_from_dict(resp):
         resp['prev_hash'],
         resp['time_stamp'],
         resp['index'],
-        myPara,
+        myPara,     # dummy and useless here
         resp['miner'],
-        resp['base_global']
+        resp['base_global'],
+        template=True
     )
     template.hash = resp['hash']
     template.nonce = resp['nonce']
     template.difficulty = resp['difficulty']
     template.seed_name = resp['seed_name']
+
     template.local_hash = resp['local_hash']
     template.new_global = resp['new_global']
 
@@ -352,16 +365,16 @@ def valid_chain(new_chain):
     # valid it is a good chain
     # and compatible with our para
     if new_chain[0].seed_name != myPara.seed_name:
-        log("chain validation", "outcoming chain from a different seed")
+        print_log("chain validation", "outcoming chain from a different seed")
         return False
 
     prev_hash = CONFIG.GENESIS_HASH
     for block in new_chain:
         if not prev_hash == block.prev_hash:
-            log("chain validation", "hash link broke at block #{}".format(block.index))
+            print_log("chain validation", "hash link broke at block #{}".format(block.index))
             return False
         if not valid_hash(block):
-            log("chain validation", "wrong hash value for block #{}".format(block.index))
+            print_log("chain validation", "wrong hash value for block #{}".format(block.index))
             return False
         prev_hash = block.hash
     return True

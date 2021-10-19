@@ -7,7 +7,7 @@ import threading
 
 from DecentSpec.Seed.database import MinerDB, RewardDB
 from DecentSpec.Common.model import SharedModel # TODO 
-from DecentSpec.Common.utils import log, save_weights_into_dict, genName
+from DecentSpec.Common.utils import print_log, save_weights_into_dict, genName
 import DecentSpec.Common.config as CONFIG
 
 seed = Flask(__name__)
@@ -93,7 +93,7 @@ def flush():
             requests.post(addr+"/seed_update",
                         json=post_object)
         except requests.exceptions.ConnectionError:
-            log("requests", "fails to connect to " + addr)
+            print_log("requests", "fails to connect to " + addr)
     return "new seed injected", 200
 
 # another thread printing registered list periodically

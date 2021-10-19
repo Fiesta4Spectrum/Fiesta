@@ -25,7 +25,7 @@ class Intrpt:
         with self.lock:
             self.flag = True
 
-def log(tag, content):
+def print_log(tag, content):
     print("[{}] {}".format(tag, content))
 
 def genName(num=CONFIG.DEFAULT_NAME_LENGTH):

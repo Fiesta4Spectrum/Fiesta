@@ -17,8 +17,10 @@ useage:
             "seq"   - AAAA BBBB CCCC DDDD
             "rr"    - ABCD ABCD ABCD ABCD
             "rand"  - randomly
-            "muji"  - use the pregenerated, non-suffix "test_default" dataset
+            "muji"  - use the pre-generated, fixed "test_muji" dataset
 '''
+
+FULL_DATASET = "../Dataset/GPS-power.dat"
 
 def genName(num=5):
     salt = ''.join(random.sample(string.ascii_letters + string.digits, num))
@@ -45,10 +47,6 @@ def genShell(tag):
     shell_file.write("cd DecentSpec/Test\n")
     shell_file.close()
     print("- done, plz run 'source run_test_{}.sh' ".format(test_id))
-
-
-FULL_DATASET = "../Dataset/GPS-power.dat"
-
 
 if len(sys.argv) == 7:
     miner_num = int(sys.argv[1])
