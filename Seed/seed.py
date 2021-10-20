@@ -4,19 +4,42 @@ import requests
 import time
 from flask import Flask, request
 import threading
+from importlib import import_module
 
 from DecentSpec.Seed.database import MinerDB, RewardDB
 from DecentSpec.Common.modelTemplate import FNNModel 
 from DecentSpec.Common.utils import print_log, save_weights_into_dict, genName
 import DecentSpec.Common.config as CONFIG
+
 # from DecentSpec.Common.tasks import TV_CHANNEL_TASK as SEED
-from DecentSpec.Common.tasks import ANOMALY_DETECTION_TASK as SEED
+# from DecentSpec.Common.tasks import ANOMALY_DETECTION_TASK as SEED
+
+'''
+usage:
+    python -m DecentSpec.Seed.seed {1} {2} 
+    {1} - task type:
+            "tv"    : tv channel regression
+            "anom"  : anomaly detection
+    {2} - int, port number
+'''
 
 seed = Flask(__name__)
+SEED = None
+if (len(sys.argv) == 3):
+    task_type = sys.argv[1]
+    # dynamic import Task seed
+    if task_type == "tv":   
+        SEED = getattr(import_module("DecentSpec.Common.tasks"), "TV_CHANNEL_TASK")
+    elif task_type == "anom":
+        SEED = getattr(import_module("DecentSpec.Common.tasks"), "ANOMALY_DETECTION_TASK")
+    else:
+        print("unrecognized task")
+        exit()
+    myPort = sys.argv[2]
+else:
+    print("wrong argument, check usage")
+    exit()
 
-myPort = "5000"
-if (len(sys.argv) == 2):
-    myPort = sys.argv[1]
 
 myName = genName()  # name of this seed server
 print("***** NODE init, I am seed {} *****".format(myName))

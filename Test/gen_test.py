@@ -4,10 +4,14 @@ import string
 import os
 import math
 import Common.tasks as TASKS
+import Common.config as CONFIG
 
 '''
 useage:
-    python gen_test.py {1} {2} {3} {4} {5} {6}
+    python gen_test.py {0} {1} {2} {3} {4} {5} {6}
+    {0} - task type:
+            "tv"    - TV Channel Regression
+            "anom"  - Anomaly Detection
     {1} - int, num of miner
     {2} - int, num of edge device
     {3} - float, percentage of test set 
@@ -21,9 +25,10 @@ useage:
             "muji"  - use the pre-generated, fixed "test_muji" dataset
 '''
 
-# FULL_DATASET = TASKS.TV_CHANNEL_TASK.FULL_FILE_PATH
-FULL_DATASET = TASKS.ANOMALY_DETECTION_TASK.FULL_FILE_PATH
-MY_IP = "http://api.decentspec.org"
+def remove_port(addr_with_port):
+    ip = addr_with_port.split(":")[1]
+    return "http:" + ip
+
 
 def genName(num=5):
     salt = ''.join(random.sample(string.ascii_letters + string.digits, num))
@@ -34,29 +39,40 @@ def genShell(tag):
 
     shell_file = open("run_test_{}.sh".format(test_id), "w")
     shell_file.write("cd ../..\n")
-    shell_file.write("xterm -T seednode -e python -m DecentSpec.Seed.seed 5000 &\n")
+    shell_file.write("xterm -T seednode -e python3 -m DecentSpec.Seed.seed {} 5000 &\n".format(task))
     shell_file.write("sleep 1\n")
     for i in range(0, miner_num):
-        shell_file.write("xterm -T miner{} -e python -m DecentSpec.Miner.miner {} {} {} &\n".format(i, MY_IP, 8000+i, pool_size))
+        shell_file.write("xterm -T miner{} -e python3 -m DecentSpec.Miner.miner {} {} {} &\n".format(i, MY_IP, 8000+i, pool_size))
     shell_file.write("sleep 1\n")
 
     for i in range(0, edge_num):
         train_file_path = "DecentSpec/Test/{}/train_{}.dat".format(dataset_path, i)
-        shell_file.write("xterm -T edge{} -e python -m DecentSpec.EdgeSim.edge train {} {} {} &\n".format(i, train_file_path, 0, round))         #  size zero refers to full set
+        shell_file.write("xterm -T edge{} -e python3 -m DecentSpec.EdgeSim.edge train {} {} {} &\n".format(i, train_file_path, 0, round))         #  size zero refers to full set
 
     test_file_path = "DecentSpec/Test/{}/test.dat".format(dataset_path)
-    shell_file.write("xterm -T loss_tester -e python -m DecentSpec.EdgeSim.edge test {} {} {} &\n".format(test_file_path, 0, round))            #  size zero refers to full set
+    shell_file.write("xterm -T loss_tester -e python3 -m DecentSpec.EdgeSim.edge test {} {} {} &\n".format(test_file_path, 0, round))            #  size zero refers to full set
     shell_file.write("cd DecentSpec/Test\n")
     shell_file.close()
     print("- done, plz run 'source run_test_{}.sh' ".format(test_id))
 
-if len(sys.argv) == 7:
-    miner_num = int(sys.argv[1])
-    edge_num = int(sys.argv[2])
-    test_percent = float(sys.argv[3])
-    round = int(sys.argv[4])
-    pool_size = int(sys.argv[5])
-    policy = sys.argv[6]
+FULL_DATASET = None
+MY_IP = remove_port(CONFIG.SEED_ADDR)
+
+if len(sys.argv) == 8:
+    task = sys.argv[1]
+    if task == "tv":
+        FULL_DATASET = TASKS.TV_CHANNEL_TASK.FULL_FILE_PATH
+    elif task == "anom":
+        FULL_DATASET = TASKS.ANOMALY_DETECTION_TASK.FULL_FILE_PATH
+    else:
+        print("unrecognized task")
+        exit()
+    miner_num = int(sys.argv[2])
+    edge_num = int(sys.argv[3])
+    test_percent = float(sys.argv[4])
+    round = int(sys.argv[5])
+    pool_size = int(sys.argv[6])
+    policy = sys.argv[7]
     if test_percent > 0.5:
         print("test set oversize")
         exit()
@@ -68,7 +84,7 @@ else:
     exit()
 
 test_id = genName()
-print("- test id: " + test_id)
+print("- task type: {} | test id: ".format(task, test_id))
 print("- {} miners, {} edge devices, total {} rounds, {} local weights per round".format(miner_num, edge_num, round, pool_size))
 print("- dataset generation policy: " + policy)
 

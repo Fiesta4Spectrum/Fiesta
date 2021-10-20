@@ -4,7 +4,7 @@ LOG_CHAIN = True
 
 # COMMON 
 DEFAULT_NAME_LENGTH = 10
-SEED_ADDR = "http://api.decentspec.org:5000"
+SEED_ADDR = "http://127.0.0.1:5000"
 POW_ENABLE = True # false will disable the difficulty check which we do not care hash anymore
 REPRODUCIBILITY = True
 
