@@ -97,8 +97,7 @@ def getLatest(addr_list):
     return data['weight'], data['preprocPara'], data['trainPara'], data['layerStructure']
 
 def pushTrained(size, lossDelta, weight, addr_list):
-    if CONFIG.MAX_UPLOAD_DELAY:
-        sleep(random.uniform(0.0, float(CONFIG.MAX_UPLOAD_DELAY)))
+
     MLdata = {
         'stat' : {  'size' : size,
                     'lossDelta' : lossDelta,},
@@ -121,7 +120,6 @@ def pushTrained(size, lossDelta, weight, addr_list):
         except requests.exceptions.ConnectionError:
             print_log("requests", "fails to connect to" + addr)
             continue
-
 
     # send to server
 
@@ -199,6 +197,10 @@ def train_mode(train_file):
     global fetch_size_per
     global rounds
 
+    # shift in init phase
+    if CONFIG.MAX_INIT_DELAY:
+        sleep(random.uniform(0.0, float(CONFIG.MAX_INIT_DELAY)))
+    
     localFeeder = DataFeeder(train_file)
     while localFeeder.haveData() and (rounds > 0):
     # full life cycle of one round ==============================
@@ -215,6 +217,9 @@ def train_mode(train_file):
         size, lossDelta, weight = localTraining(myModel, localFeeder.fetch(fetch_size_per), trainPara, layerStructure)
         # print(myModel.state_dict())
         # send back to server
+        # shipf in upload phase
+        if CONFIG.MAX_UPLOAD_DELAY:
+            sleep(random.uniform(0.0, float(CONFIG.MAX_UPLOAD_DELAY)))
         pushTrained(size, lossDelta, weight, minerList)
     # end of the life cycle =====================================
 
