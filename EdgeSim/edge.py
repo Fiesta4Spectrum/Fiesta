@@ -100,7 +100,8 @@ def pushTrained(size, lossDelta, weight, addr_list):
     MLdata = {
         'stat' : {  'size' : size,
                     'lossDelta' : lossDelta,},
-        'weight' : weight
+        'weight' : weight,
+        'base_gen' : global_gen,
     }
     global myName
     data = {

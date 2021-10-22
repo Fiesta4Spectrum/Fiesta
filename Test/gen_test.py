@@ -43,14 +43,14 @@ def genShell(tag):
     shell_file.write("xterm -T seednode -e python3 -m DecentSpec.Seed.seed {} 5000 &\n".format(task))
     shell_file.write("sleep 1\n")
     for i in range(0, miner_num):
-        shell_file.write("xterm -T miner{} -e python3 -m DecentSpec.Miner.miner {} {} {} {}&\n".format(i, MY_IP, 8000+i, pool_size_min, pool_size_max))
+        shell_file.write("xterm -T miner{} -e python3 -m DecentSpec.Miner.miner {} {} {} {}&\n".format(i, MY_IP, 8000+i, block_size_min, block_size_max))
     shell_file.write("sleep 1\n")
 
     for i in range(0, edge_num):
         train_file_path = "DecentSpec/Test/{}/train_{}.dat".format(dataset_path, i)
         shell_file.write("xterm -T edge{} -e python3 -m DecentSpec.EdgeSim.edge train {} {} {} &\n".format(i, train_file_path, 0, round))         #  size zero refers to full set
 
-    test_round = math.floor(edge_num * round / pool_size_min) + 1
+    test_round = math.ceil(edge_num * round / block_size_max) + 1
     test_file_path = "DecentSpec/Test/{}/test.dat".format(dataset_path)
     shell_file.write("xterm -T loss_tester -e python3 -m DecentSpec.EdgeSim.edge test {} {} {} &\n".format(test_file_path, 0, test_round))            #  size zero refers to full set
     shell_file.write("cd DecentSpec/Test\n")
@@ -73,8 +73,8 @@ if len(sys.argv) == 9:
     edge_num = int(sys.argv[3])
     test_percent = float(sys.argv[4])
     round = int(sys.argv[5])
-    pool_size_min = int(sys.argv[6])
-    pool_size_max = int(sys.argv[7])
+    block_size_min = int(sys.argv[6])
+    block_size_max = int(sys.argv[7])
     policy = sys.argv[8]
     if test_percent > 0.5:
         print("test set oversize")
@@ -88,7 +88,7 @@ else:
 
 test_id = genName()
 print("- task type: {} | test id: {}".format(task, test_id))
-print("- {} miners, {} edge devices, total {} rounds, {} local weights per round".format(miner_num, edge_num, round, pool_size_min))
+print("- {} miners, {} edge devices, total {} rounds, {}~{} local weights per round".format(miner_num, edge_num, round, block_size_min, block_size_max))
 print("- dataset generation policy: " + policy)
 
 if policy != "muji":

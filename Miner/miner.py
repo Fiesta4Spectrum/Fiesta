@@ -126,7 +126,7 @@ def get_global():
                 'trainPara' : para.train,
                 'layerStructure' : para.nn_structure,
                 'seed_name' : para.seed_name,
-                'generation' : myChain.size,
+                'generation' : latest.index,
                 }
     return json.dumps(data)
 

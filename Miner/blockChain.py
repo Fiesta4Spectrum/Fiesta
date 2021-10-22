@@ -27,7 +27,7 @@ class Block:
         # global model
         self.base_global = base_weight
         if not template:
-            self.new_global = Block.ewma_mix(self.local_list, self.base_global, para.alpha)
+            self.new_global = Block.ewma_mix(self.local_list, self.base_global, para.alpha, self.index)
         else:
             self.new_global = None
     
@@ -58,7 +58,7 @@ class Block:
         return len(content)
 
     @staticmethod
-    def ewma_mix(local_list, base, alpha):
+    def ewma_mix(local_list, base, alpha, cur_gen):
         if local_list == None or len(local_list) < 1 or base == None:
             return None
         base_tensor = dict2tensor(base)
@@ -68,9 +68,13 @@ class Block:
             if local['type'] == 'localModelWeight':
                 MLdata = local['content']
                 size = MLdata['stat']['size']
+                if 'base_gen' in MLdata:
+                    base_gen = MLdata['base_gen']
+                else:
+                    base_gen = cur_gen - 1
                 total_size += size
                 locals_with_size.append(
-                    (size, dict2tensor(MLdata['weight']))
+                    (size, dict2tensor(MLdata['weight']), base_gen)
                 )
 
         averaged_weight = {}
