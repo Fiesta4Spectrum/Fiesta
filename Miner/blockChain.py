@@ -81,7 +81,7 @@ class Block:
         for k in locals_with_size[0][1].keys():
             
             for i in range(0, len(locals_with_size)):
-                local_size, local_weight = locals_with_size[i]
+                local_size, local_weight, local_base_gen = locals_with_size[i]
                 w = local_size / total_size
                 if i==0:
                     averaged_weight[k] = local_weight[k] * w
