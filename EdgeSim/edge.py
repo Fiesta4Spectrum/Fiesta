@@ -223,7 +223,7 @@ def test_mode(test_file):
     global rounds
 
     localFeeder = DataFeeder(test_file)
-    while localFeeder.haveData() and (rounds >= 0): # add one round to enable the init global model evaluate
+    while localFeeder.haveData() and (rounds > 0): # add one round to enable the init global model evaluate
         rounds -= 1
         # miner communication
         minerList = fetchList(CONFIG.SEED_ADDR)

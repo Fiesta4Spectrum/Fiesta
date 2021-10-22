@@ -24,10 +24,11 @@ usage:
 miner = Flask(__name__)
 myPort = None
 myIp = None
-if (len(sys.argv) == 4):
+if (len(sys.argv) == 5):
     myIp = sys.argv[1]
     myPort = sys.argv[2]
-    POOL_MINE_THRESHOLD = int(sys.argv[3])
+    BLOCK_MIN_THRESHOLD = int(sys.argv[3])
+    BLOCK_MAX_THRESHOLD = int(sys.argv[4])
 else:
     print("incorrect parameter")
     exit
@@ -218,9 +219,9 @@ def mine():
             print_log("mine", "difficulty not set")
             continue
 
-        if myPool.size >= POOL_MINE_THRESHOLD:
+        if myPool.size >= BLOCK_MIN_THRESHOLD:
             print_log("mine", "enough local model, start pow")
-            new_block = gen_candidate_block(myPool.get_pool_list(POOL_MINE_THRESHOLD))
+            new_block = gen_candidate_block(myPool.get_pool_list(BLOCK_MAX_THRESHOLD))
             if new_block:
                 if consensus():
                     if myChain.valid_then_add(new_block):
