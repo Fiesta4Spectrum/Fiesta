@@ -9,7 +9,8 @@ POW_ENABLE = True # false will disable the difficulty check which we do not care
 REPRODUCIBILITY = True
 
 # @EDGE_SIM related 
-EDGE_TRAIN_INTERVAL = 1    # seconds between two round
+EDGE_TRAIN_INTERVAL = 1     # seconds between two round
+MAX_UPLOAD_DELAY = 3        # seconds of max delay before upload trained local, 0 for no delay
 
 # @MINER related 
 MINER_REG_INTERVAL = 19

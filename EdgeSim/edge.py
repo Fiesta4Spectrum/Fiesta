@@ -97,6 +97,8 @@ def getLatest(addr_list):
     return data['weight'], data['preprocPara'], data['trainPara'], data['layerStructure']
 
 def pushTrained(size, lossDelta, weight, addr_list):
+    if CONFIG.MAX_UPLOAD_DELAY:
+        sleep(random.uniform(0.0, float(CONFIG.MAX_UPLOAD_DELAY)))
     MLdata = {
         'stat' : {  'size' : size,
                     'lossDelta' : lossDelta,},
