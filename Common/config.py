@@ -10,15 +10,15 @@ REPRODUCIBILITY = True
 
 # @EDGE_SIM related 
 EDGE_TRAIN_INTERVAL = 1     # seconds between two round
-MAX_UPLOAD_DELAY = 3        # seconds of max delay before upload trained local, 0 for no delay
-MAX_INIT_DELAY = 8         # seconds of max delay before init an edge device, 0 for no delay
+MAX_UPLOAD_DELAY = 0        # seconds of max delay before upload trained local, 0 for no delay
+MAX_INIT_DELAY = 0         # seconds of max delay before init an edge device, 0 for no delay
 
 # @MINER related 
 MINER_REG_INTERVAL = 19
 GENESIS_HASH = "genesis_hash"
 BLOCK_GEN_INTERVAL = 1      # seconds between mining
-# POOL_MINE_THRESHOLD = 3     # num of local models before mining
-                                # get mine threshold at runtime for easy test
+STRICT_BLOCK_SIZE = True    # True: each block size will be max except #1 = min
+                            # False: each block size will be min~max, except #1 = min
 
 # @SEED server related 
 SEED_CHAIN_SCAN_INTERVAL = 20     # compute reward per 20s

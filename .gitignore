@@ -131,6 +131,5 @@ dmypy.json
 Test/run_*
 Test/test_*
 Test/log_*
-Dataset/dummy.dat
-Dataset/PSD_256dup.dat
+Dataset/*.dat
 Test/res*

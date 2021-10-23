@@ -15,10 +15,11 @@ from DecentSpec.Miner.para import Para
 
 '''
 usage:
-    python -m DecentSpec.Miner.miner {1} {2} {3}
+    python -m DecentSpec.Miner.miner {1} {2} {3} {4}
     {1} - ip or domain with http
     {2} - port 
-    {3} - POOL_MINE_THRESHOLD
+    {3} - block min locals
+    {4} - block max locals
 '''
 
 miner = Flask(__name__)
@@ -219,9 +220,9 @@ def mine():
             print_log("mine", "difficulty not set")
             continue
 
-        if myPool.size >= BLOCK_MIN_THRESHOLD:
+        if myPool.size >= actual_threshold():
             print_log("mine", "enough local model, start pow")
-            new_block = gen_candidate_block(myPool.get_pool_list(BLOCK_MAX_THRESHOLD))
+            new_block = gen_candidate_block(myPool.get_pool_list())
             if new_block:
                 if consensus():
                     if myChain.valid_then_add(new_block):
@@ -233,6 +234,12 @@ def mine():
             else:
                 print_log("mine", "mine abort")
 
+def actual_threshold():
+    if CONFIG.STRICT_BLOCK_SIZE:
+        return BLOCK_MAX_THRESHOLD
+    else:
+        return BLOCK_MIN_THRESHOLD
+
 def gen_candidate_block(local_list):
     global powIntr
     global myChain
@@ -242,6 +249,11 @@ def gen_candidate_block(local_list):
     if powIntr.check():
         print_log('pow', 'not allowed!')
         return None
+    
+    if myChain.size == 1:
+        local_list = local_list[:BLOCK_MIN_THRESHOLD].copy()    # first block use the min threshold
+    else:
+        local_list = local_list[:BLOCK_MAX_THRESHOLD].copy()    # other block use the max threshold
 
     new_block = Block(
         local_list,

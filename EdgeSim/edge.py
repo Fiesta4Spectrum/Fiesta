@@ -12,11 +12,15 @@ from DecentSpec.Common.modelTemplate import FNNModel
 import DecentSpec.Common.config as CONFIG
 '''
 usage:
-    python -m DecentSpec.EdgeSim.edge {1} {2} {3}
+    python -m DecentSpec.EdgeSim.edge {1} {2} {3} {4} {opt-5}
     {1} - mode: test or training
     {2} - file path (train or test)
     {3} - size per round / "0" refers to full set
     {4} - round nums
+    {5} - reachable minerlist
+            0 : full minerlist
+            n : first n miners
+           -n : last n mines 
 '''
 
 DATA_PARALLEL = 8
@@ -69,7 +73,13 @@ class DataFeeder:                   # emulate each round dataset feeder
 
 def fetchList(addr):
     response = requests.get(addr + CONFIG.API_GET_MINER)
-    return response.json()['peers']
+    full_list = response.json()['peers']
+    if miner_access > 0:
+        return full_list[:miner_access]
+    elif miner_access < 0:
+        return full_list[miner_access:]
+    else:
+        return full_list
 
 def getLatest(addr_list):
     global task_name
@@ -259,11 +269,15 @@ print("***** NODE init, I am edge {} *****".format(myName))
 fetch_size_per = 0
 rounds = 0
 mode = "none"
-if len(sys.argv) == 5:
+miner_access = 0
+
+if len(sys.argv) >= 5:
     mode = sys.argv[1]
     file_path = sys.argv[2]
     fetch_size_per = int(sys.argv[3])
     rounds = int(sys.argv[4])
+    if len(sys.argv) == 6:
+        miner_access = int(sys.argv[5])
 else:
     print("unrecognized command")
 
