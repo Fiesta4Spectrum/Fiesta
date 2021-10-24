@@ -15,17 +15,22 @@ from DecentSpec.Miner.para import Para
 
 '''
 usage:
-    python -m DecentSpec.Miner.miner {1} {2} {3} {4}
+    python -m DecentSpec.Miner.miner {1} {2} {3} {4} {opt-5}
     {1} - ip or domain with http
     {2} - port 
     {3} - block min locals
     {4} - block max locals
+    {5} - partition simulation parameter
+            0 : full peerlist
+            n : first n peers
+           -n : last n peers 
 '''
 
 miner = Flask(__name__)
 myPort = None
 myIp = None
-if (len(sys.argv) == 5):
+
+if (len(sys.argv) >= 5):
     myIp = sys.argv[1]
     myPort = sys.argv[2]
     BLOCK_MIN_THRESHOLD = int(sys.argv[3])
@@ -47,6 +52,41 @@ powIntr = Intrpt('pow interrupt')
 myPeers = None      # peer miner list
 myPara = None       # mother copy of parameters
                     # not directly referenceds only used for duplication
+
+# PARTITION EXP FIELD =================================== /// ===============================
+PARTITION = False
+PARTITION_ST_INDEX = 7
+PARTITION_ED_INDEX = 14
+myPeers_bkup = None         # back up of full peer list
+peer_access = 0             # input para {5} of partition map
+
+if len(sys.argv) == 6:      # activate partition if {5} exsits
+    peer_access = int(sys.argv[5])
+    if peer_access != 0:
+        PARTITION = True
+
+def partition_exe():
+    global myPeers
+    global myPeers_bkup
+    global myChain
+    global PARTITION
+
+    if not PARTITION:
+        return
+    if myPeers_bkup == None:
+        myPeers_bkup = myPeers
+        myPeers_bkup.sort()     # sort is needed
+    if myChain.size > PARTITION_ST_INDEX and \
+       myChain.size <= PARTITION_ED_INDEX:
+        if peer_access > 0:
+            myPeers = myPeers_bkup[:peer_access]
+        elif peer_access < 0:
+            myPeers = myPeers_bkup[peer_access:]
+        return
+    if myChain.size > PARTITION_ED_INDEX:
+        myPeers = myPeers_bkup
+        return
+# ====================================================== /// ================================
 
 # flask api setup ========================================
 
@@ -221,6 +261,9 @@ def mine():
             continue
 
         if myPool.size >= actual_threshold():
+            # PARTITION EXP FIELD
+            partition_exe()
+            # ===================
             print_log("mine", "enough local model, start pow")
             new_block = gen_candidate_block(myPool.get_pool_list())
             if new_block:
