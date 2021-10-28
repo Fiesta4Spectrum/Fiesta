@@ -133,3 +133,4 @@ Test/test_*
 Test/log_*
 Dataset/*.dat
 Test/res*
+Test/exp_*

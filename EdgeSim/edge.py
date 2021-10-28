@@ -24,6 +24,7 @@ usage:
 '''
 
 DATA_PARALLEL = 8
+SIMPLE_PRINT = True
 
 task_name = None
 global_gen = -1
@@ -259,7 +260,10 @@ def test_mode(test_file):
 def print_loss(loss):
     output_path = "DecentSpec/Test/test_loss_{}.txt".format(myName)
     with open(output_path, "a+") as f:
-        f.write("[{}] [{} @ gen {}]\n{}\n\n".format(curTime(), task_name, global_gen, loss))
+        if SIMPLE_PRINT:
+            f.write("{}\n".format(loss))
+        else:
+            f.write("[{}] [{} @ gen {}]\n{}\n\n".format(curTime(), task_name, global_gen, loss))
 
 
 # main =======================================================

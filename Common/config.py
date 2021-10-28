@@ -17,13 +17,16 @@ MAX_INIT_DELAY = 0         # seconds of max delay before init an edge device, 0 
 MINER_REG_INTERVAL = 19
 GENESIS_HASH = "genesis_hash"
 BLOCK_GEN_INTERVAL = 1      # seconds between mining
-STRICT_BLOCK_SIZE = True    # True: each block size will be max except #1 = min
+STRICT_BLOCK_SIZE = False    # True: each block size will be max except #1 = min
                             # False: each block size will be min~max, except #1 = min
 
 # @SEED server related 
 SEED_CHAIN_SCAN_INTERVAL = 20     # compute reward per 20s
 SEED_LEASING_COUNTDOWN = 1    # rate of leasing timer reduction
 SEED_LEASING_INIT = 20
+EWMA_SIMPLE = False             # policy of ewma
+                                # simple: new * alpha + base * (1-alpha)
+                                # complicated: (new - base) * genPenalty() + base
 
 # API related
 API_POST_LOCAL = '/new_transaction'

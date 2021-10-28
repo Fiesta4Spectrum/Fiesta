@@ -71,7 +71,7 @@ class Block:
                 if 'base_gen' in MLdata:
                     base_gen = MLdata['base_gen']
                 else:
-                    base_gen = cur_gen - 1
+                    base_gen = cur_gen - 1  # default as the freshest
                 total_size += size
                 locals_with_size.append(
                     (size, dict2tensor(MLdata['weight']), base_gen)
@@ -83,12 +83,20 @@ class Block:
             for i in range(0, len(locals_with_size)):
                 local_size, local_weight, local_base_gen = locals_with_size[i]
                 w = local_size / total_size
+                twisted_local_k = base_tensor[k] + (local_weight[k] - base_tensor[k]) * Block.ewma_gen_penalty(cur_gen - local_base_gen, alpha)
                 if i==0:
-                    averaged_weight[k] = local_weight[k] * w
+                    averaged_weight[k] = twisted_local_k * w
                 else:
-                    averaged_weight[k] += local_weight[k] * w
-            averaged_weight[k] = (1-alpha) * base_tensor[k] + alpha * averaged_weight[k]
+                    averaged_weight[k] += twisted_local_k * w
+            if CONFIG.EWMA_SIMPLE:
+                averaged_weight[k] = (1-alpha) * base_tensor[k] + alpha * averaged_weight[k]
         return tensor2dict(averaged_weight)
+
+    @staticmethod
+    def ewma_gen_penalty(gap, alpha):
+        if CONFIG.EWMA_SIMPLE:
+            return 1
+        return alpha ** abs(gap-1)
 
 class FileLogger:
     def __init__(self, name):
