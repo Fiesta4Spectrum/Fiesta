@@ -1,6 +1,8 @@
 # FILE LOG ENABLE
 LOG_POOL = False
+LOG_MINER = True
 LOG_CHAIN = True
+LOG_REWARD = True
 
 # COMMON 
 DEFAULT_NAME_LENGTH = 10
@@ -19,12 +21,13 @@ GENESIS_HASH = "genesis_hash"
 BLOCK_GEN_INTERVAL = 1      # seconds between mining
 STRICT_BLOCK_SIZE = False    # True: each block size will be max except #1 = min
                             # False: each block size will be min~max, except #1 = min
+ONE_AUTHOR_ONE_LOCAL = True
 
 # @SEED server related 
 SEED_CHAIN_SCAN_INTERVAL = 20     # compute reward per 20s
 SEED_LEASING_COUNTDOWN = 1    # rate of leasing timer reduction
 SEED_LEASING_INIT = 20
-EWMA_SIMPLE = False             # policy of ewma
+EWMA_SIMPLE = True             # policy of ewma
                                 # simple: new * alpha + base * (1-alpha)
                                 # complicated: (new - base) * genPenalty() + base
 

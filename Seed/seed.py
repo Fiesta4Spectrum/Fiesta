@@ -57,7 +57,7 @@ myPara = {
     'difficulty' : SEED.DIFFICULTY,
 } 
 
-rewardRecord = RewardDB(myMembers, myPara)
+rewardRecord = RewardDB(myMembers, myPara, myName)
 
 # register related api ===================================
 
@@ -77,7 +77,7 @@ def reg_miner():
         'from' : myName,
         'seedWeight' : save_weights_into_dict(seedModel),
         'para' : myPara,
-        'list' : myMembers.getList(),
+        'peers' : myMembers.getList(),
     }
     # print(ret)
     # print("registered a new node")
@@ -99,6 +99,7 @@ def flush():
         'from' : myName,
         'seedWeight' : globalWeight,
         'para' : myPara,
+        'peers' : myMembers.getList(),
     }
     for addr in myMembers.getList():
         try: 

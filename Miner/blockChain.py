@@ -52,6 +52,19 @@ class Block:
     def get_global(self):
         return self.new_global
 
+    def print_list(self):
+        printable = list(map(Block.extract_author, self.local_list))
+        printable.sort()
+        return "/t".join(printable)
+
+    @staticmethod
+    def extract_author(local_dict):
+        if 'upload_index' in local_dict:
+            index = local_dict['upload_index']
+        else:
+            index = 0
+        return "{}-{}".format(index, local_dict['author'][:3])
+
     @staticmethod
     def size_in_char(block):
         content = str(block.__dict__)
@@ -88,25 +101,29 @@ class Block:
                     averaged_weight[k] = twisted_local_k * w
                 else:
                     averaged_weight[k] += twisted_local_k * w
-            if CONFIG.EWMA_SIMPLE:
-                averaged_weight[k] = (1-alpha) * base_tensor[k] + alpha * averaged_weight[k]
         return tensor2dict(averaged_weight)
 
     @staticmethod
     def ewma_gen_penalty(gap, alpha):
         if CONFIG.EWMA_SIMPLE:
-            return 1
+            return alpha
         return alpha ** abs(gap-1)
 
 class FileLogger:
     def __init__(self, name):
-        self.name = "DecentSpec/Test/log_{}.txt".format(name)
+        self.__log_path = "DecentSpec/Test/log_{}.txt".format(name)
+        self.__chain_path = "DecentSpec/Test/chain_{}.txt".format(name)
         self.zero = 0
+    def print_chain(self, chain):
+        with open(self.__chain_path, "w") as f:
+            f.write("index\tpre-hash\tthis-hash\tminer\tlocal_lists\n")
+            for block in chain:
+                f.write("{}\t{}\t{}\t{}\t{}\n".format(block.index, block.prev_hash[:6], block.hash[:6], block.miner[:6], block.print_list()))
     def log(self, tag, content):
-        with open(self.name, "a+") as f:
+        with open(self.__log_path, "a+") as f:
             f.write("{:.5f} [{}] \n{}\n\n".format(genTimestamp() - self.zero, tag, content))
     def calibrate(self):
-        with open(self.name, "a+") as f:
+        with open(self.__log_path, "a+") as f:
             f.write("start from: {}\n\n".format(curTime()))
         self.zero = genTimestamp()
 
@@ -122,6 +139,7 @@ class BlockChain:
         genesis_block.hash = genesis_block.compute_hash()
         self.chain.append(genesis_block)
         self.file_log('genesis')
+        self.update_chain_print()
 
     def flush(self):
         # with self.lock:
@@ -132,6 +150,7 @@ class BlockChain:
         # with self.lock:
             self.chain = new_chain
             self.file_log('replace')
+            self.update_chain_print()
 
     
     def get_chain_list(self):
@@ -148,8 +167,12 @@ class BlockChain:
         return output
     
     def file_log(self, tag):
-        if CONFIG.LOG_CHAIN:
+        if CONFIG.LOG_MINER:
             self.logger.log("chain_" + tag, self.get_chain_log())
+    
+    def update_chain_print(self):
+        if CONFIG.LOG_CHAIN:
+            self.logger.print_chain(self.chain)
 
     @property
     def last_block(self):
@@ -187,4 +210,5 @@ class BlockChain:
                 return False
             self.chain.append(new_block)
             self.file_log('grow')
+            self.update_chain_print()
             return True

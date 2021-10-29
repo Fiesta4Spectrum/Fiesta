@@ -17,10 +17,14 @@ usage:
     {2} - file path (train or test)
     {3} - size per round / "0" refers to full set
     {4} - round nums
-    {5} - reachable minerlist
-            0 : full minerlist
-            n : first n miners
-           -n : last n mines 
+    {5} - gen_text.py script will not gen this para,
+            it is only for manual experiment
+            (1) reachable minerlist 
+                R0 : full minerlist
+                Rn : first n miners
+                R-n : last n mines
+            (2) async set tsundere value
+                Tn : tsundere = n
 '''
 
 DATA_PARALLEL = 8
@@ -75,6 +79,7 @@ class DataFeeder:                   # emulate each round dataset feeder
 def fetchList(addr):
     response = requests.get(addr + CONFIG.API_GET_MINER)
     full_list = response.json()['peers']
+    full_list.sort()
     if miner_access > 0:
         return full_list[:miner_access]
     elif miner_access < 0:
@@ -85,7 +90,10 @@ def fetchList(addr):
 def getLatest(addr_list):
     global task_name
     global global_gen
+    global tsundere
+
     while True:
+        sleep(CONFIG.EDGE_TRAIN_INTERVAL)
         while True:
             addr = random.choice(addr_list)
             try:
@@ -94,20 +102,24 @@ def getLatest(addr_list):
             except requests.exceptions.ConnectionError:
                 print_log("requests", "fails to connect to" + addr)
                 continue
+
         data = response.json()
         new_task_name = data['seed_name']
         new_global_gen = data['generation']
-        if new_task_name != task_name or new_global_gen > global_gen:
+        if new_task_name != task_name:              # accept global if it is a new task
             break
+        if new_global_gen - global_gen >= tsundere: # accept global if fullfill our tsundere reqirement (min global update between trains)
+            break
+        if new_global_gen - global_gen > 0:
+            print("spin because I am a tsundere")   # tsundere is waiting for a higher generation global model
+            continue
         print("spin because {} is an old guy".format(addr))
-        sleep(CONFIG.EDGE_TRAIN_INTERVAL)
     task_name = new_task_name
     global_gen = new_global_gen
     
-    print("will perform on task<{}> of gen<{}>".format(task_name, global_gen))
     return data['weight'], data['preprocPara'], data['trainPara'], data['layerStructure']
 
-def pushTrained(size, lossDelta, weight, addr_list):
+def pushTrained(size, lossDelta, weight, addr_list, index):
 
     MLdata = {
         'stat' : {  'size' : size,
@@ -122,6 +134,7 @@ def pushTrained(size, lossDelta, weight, addr_list):
         'timestamp' : genTimestamp(),
         'type' : 'localModelWeight',
         'plz_spread' : 1,
+        'upload_index' : index, # the i-th local weights uploaded by this edge, starts from 1
     }
     while True:
         addr = random.choice(addr_list)
@@ -207,18 +220,25 @@ def localTester(model, data, para, layerStructure):
 def train_mode(train_file):
     global fetch_size_per
     global rounds
+    global task_name
+    global global_gen
+    global mode
 
     # shift in init phase
     if CONFIG.MAX_INIT_DELAY:
         sleep(random.uniform(0.0, float(CONFIG.MAX_INIT_DELAY)))
     
     localFeeder = DataFeeder(train_file)
+    index = 0
     while localFeeder.haveData() and (rounds > 0):
     # full life cycle of one round ==============================
         rounds -= 1
+        index += 1
         # miner communication
         minerList = fetchList(CONFIG.SEED_ADDR)
         modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList)
+        print("performing {}-th {} based on task {} # {}".format(index, mode, task_name, global_gen))
+
         # model init, should have built according to miner response
         myModel = FNNModel(layerStructure)
         load_weights_from_dict(myModel, modelWeights)
@@ -226,12 +246,11 @@ def train_mode(train_file):
         localFeeder.setPreProcess(preprocPara)
         # local training
         size, lossDelta, weight = localTraining(myModel, localFeeder.fetch(fetch_size_per), trainPara, layerStructure)
-        # print(myModel.state_dict())
         # send back to server
-        # shipf in upload phase
+        # shift in upload phase
         if CONFIG.MAX_UPLOAD_DELAY:
             sleep(random.uniform(0.0, float(CONFIG.MAX_UPLOAD_DELAY)))
-        pushTrained(size, lossDelta, weight, minerList)
+        pushTrained(size, lossDelta, weight, minerList, index)
     # end of the life cycle =====================================
 
     print("local dataset training done!")
@@ -239,11 +258,9 @@ def train_mode(train_file):
 
 def test_mode(test_file):
     global fetch_size_per
-    global rounds
 
     localFeeder = DataFeeder(test_file)
-    while localFeeder.haveData() and (rounds > 0): # add one round to enable the init global model evaluate
-        rounds -= 1
+    while True: # none-stop test
         # miner communication
         minerList = fetchList(CONFIG.SEED_ADDR)
         modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList)
@@ -274,6 +291,9 @@ fetch_size_per = 0
 rounds = 0
 mode = "none"
 miner_access = 0
+tsundere = 1    # TsuNDeRe 蹭的累
+                # perform next training 
+                # only after the global grow up "tsundere"'s gen more!
 
 if len(sys.argv) >= 5:
     mode = sys.argv[1]
@@ -281,12 +301,17 @@ if len(sys.argv) >= 5:
     fetch_size_per = int(sys.argv[3])
     rounds = int(sys.argv[4])
     if len(sys.argv) == 6:
-        miner_access = int(sys.argv[5])
+        if sys.argv[5].startswith("R"):
+            miner_access = int(sys.argv[5][1:])
+        elif sys.argv[5].startswith("T"):
+            tsundere = int(sys.argv[5][1:])
+        
 else:
     print("unrecognized command")
 
 if mode == "test":
     print("***   will use file <{}> perform TEST  ***".format(file_path))
+    tsundere = 1 # force the threshold of tsundere to 1 for test instance
     test_mode(file_path)
 elif mode == "train": 
     print("***   will use File <{}> perform TRAIN  ***".format(file_path))

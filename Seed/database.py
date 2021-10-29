@@ -10,7 +10,7 @@ import time
 import requests
 
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import print_log
+from DecentSpec.Common.utils import genName, print_log
 
 class MinerDB:
     def __init__(self):
@@ -91,9 +91,10 @@ class Contributor:
                 str(self.shared_weight) + '    \t' +str(self.reward)
 
 class RewardDB:
-    def __init__(self, MinerDB, para):
+    def __init__(self, MinerDB, para, name):
         self.rewardDict = {}
-        
+        self.fileName = "DecentSpec/Test/reward_{}.txt".format(name)
+
         self.myMember = MinerDB # link with memberlist for scan
         self.para = para        # link with para
         self.__runscan()
@@ -122,12 +123,22 @@ class RewardDB:
                     print_log("requests", "fails to connect to " + miner)
             print("longest chain from {}".format(fromwhom))
             self.updateReward(longest_chain)
-            print("============== Reward Database ===============")
-            print("key     \trole \tmined\tupdate\treward")
-            for node in self.rewardDict:
-                print(self.rewardDict[node].showContribution())
-            print("============== =============== ===============")
+            self.__print()
             time.sleep(CONFIG.SEED_CHAIN_SCAN_INTERVAL)
+    
+    def __print(self):
+        print("============== Reward Database ===============")
+        print("key     \trole \tmined\tupdate\treward")
+        for node in self.rewardDict:
+            print(self.rewardDict[node].showContribution())
+        print("============== =============== ===============")
+        if CONFIG.LOG_REWARD:
+            f = open(self.fileName, "w")
+            f.write("============== Reward Database ===============\n")
+            f.write("key     \trole \tmined\tupdate\treward\n")
+            for node in self.rewardDict:
+                f.write(self.rewardDict[node].showContribution() + "\n")
+            f.write("============== =============== ===============\n")
     
     def updateReward(self, dictChain):
         self.__flush()  # calculate reward from the very first block

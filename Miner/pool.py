@@ -16,26 +16,26 @@ class Pool:
 
     def add(self, new_model):           # add a local_dict
         # with self.lock:
-            # js_model = json.dumps(new_model, sort_keys=True)
-            # if js_model in self.pool:
-            #     return False
-            # else:
-            #     self.pool.add(js_model)
-            #     return True
         if new_model['hash'] in self.pool:
             return False
         else:
+            if CONFIG.ONE_AUTHOR_ONE_LOCAL:
+                self.__retire_author(new_model['author'])
             self.pool[new_model['hash']] = new_model
             self.file_log('add')
+
+    def __retire_author(self, author):
+        old_local = None
+        for local_hash in self.pool.keys():
+            if self.pool[local_hash]['author'] == author:
+                old_local = local_hash
+        if old_local:
+            self.pool.pop(old_local)
+            self.file_log('kick_stale')
 
     def remove(self, local_list):       # remove a List<local_dict>
         # remove the local model in the new block from my pool
         # with self.lock:
-            # used_locals = set(map(lambda x: json.dumps(x, sort_keys=True), local_list))
-            # old_size = len(self.pool)
-            # self.pool = self.pool - used_locals
-            # new_size = len(self.pool)
-            # used_size = len(used_locals)
         old_size = len(self.pool)
         used_size = len(local_list)
         for local in local_list:

@@ -20,10 +20,12 @@ usage:
     {2} - port 
     {3} - block min locals
     {4} - block max locals
-    {5} - partition simulation parameter
-            0 : full peerlist
-            n : first n peers
-           -n : last n peers 
+    {5} - gen_text.py script will not gen this para,
+            it is only for manual experiment
+            (1) partition simulation parameter
+                R0 : full peerlist
+                Rn : first n peers
+                R-n : last n peers
 '''
 
 miner = Flask(__name__)
@@ -57,35 +59,29 @@ myPara = None       # mother copy of parameters
 PARTITION = False
 PARTITION_ST_INDEX = 7
 PARTITION_ED_INDEX = 14
-myPeers_bkup = None         # back up of full peer list
 peer_access = 0             # input para {5} of partition map
 
 if len(sys.argv) == 6:      # activate partition if {5} exsits
-    peer_access = int(sys.argv[5])
+    peer_access = int(sys.argv[5][1:])  # ignore the first letter R in the para
     if peer_access != 0:
         PARTITION = True
 
-def partition_exe():
+def accessible_miners():
     global myPeers
-    global myPeers_bkup
     global myChain
     global PARTITION
 
     if not PARTITION:
-        return
-    if myPeers_bkup == None:
-        myPeers_bkup = myPeers
-        myPeers_bkup.sort()     # sort is needed
+        return myPeers
     if myChain.size > PARTITION_ST_INDEX and \
        myChain.size <= PARTITION_ED_INDEX:
         if peer_access > 0:
-            myPeers = myPeers_bkup[:peer_access]
+            return myPeers[:peer_access]
         elif peer_access < 0:
-            myPeers = myPeers_bkup[peer_access:]
-        return
-    if myChain.size > PARTITION_ED_INDEX:
-        myPeers = myPeers_bkup
-        return
+            return myPeers[peer_access:]
+    return myPeers
+    
+
 # ====================================================== /// ================================
 
 # flask api setup ========================================
@@ -131,10 +127,9 @@ def new_local():
     return "new local model received", 201
 
 def spread_to_peers(local_model):
-    global myPeers
     
     print_log("new_local", "gonna share this local model")
-    for peer in myPeers:
+    for peer in accessible_miners():
         try:
             requests.post(
                 url = peer + CONFIG.API_POST_LOCAL,
@@ -215,6 +210,7 @@ def register():
     global myPeers
     global myPara
     global myChain
+    global myAddr
 
     data = {
         'name' : myName,
@@ -229,8 +225,10 @@ def register():
         print_log("requests", "fails to connect to seed")
         resp = None
     if valid_resp(resp):
-        myPeers = set(resp.json()['list'])
-        myPeers.remove(myAddr)
+        myPeers = resp.json()['peers']
+        myPeers.sort()
+        if myAddr in myPeers:
+            myPeers.remove(myAddr)
         if myPara == None:
             myPara = extract_para_from_dict(resp)
             myChain.create_genesis_block(myPara)
@@ -322,14 +320,13 @@ def gen_candidate_block(local_list):
     return new_block
 
 def consensus():
-    global myPeers
     global myChain
     global powIntr
 
     i_am = True
     max_len = myChain.size
 
-    for peer in myPeers:
+    for peer in accessible_miners():
         try:
             resp = requests.get(peer + CONFIG.API_GET_CHAIN_SIMPLE).json()  # get the short version
             if resp['length'] > max_len:
@@ -351,8 +348,7 @@ def consensus():
     return i_am
 
 def announce_new_block(new_block):
-    global myPeers
-    for peer in myPeers:
+    for peer in accessible_miners():
         try:
             requests.post(
                 url = peer + CONFIG.API_POST_BLOCK,

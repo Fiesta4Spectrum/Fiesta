@@ -134,3 +134,5 @@ Test/log_*
 Dataset/*.dat
 Test/res*
 Test/exp_*
+Test/chain_*
+Test/reward_*
