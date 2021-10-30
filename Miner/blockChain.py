@@ -55,15 +55,27 @@ class Block:
     def print_list(self):
         printable = list(map(Block.extract_author, self.local_list))
         printable.sort()
-        return "/t".join(printable)
+        return "\t".join(printable)
 
+    def delay_stat(self):
+        delay = 0.0
+        size = 0
+        for local in self.local_list:
+            if local['type'] == 'localModelWeight':
+                size += 1
+                if 'base_gen' in local['content']:
+                    delay += self.index - local['content']['base_gen']
+                else:
+                    delay += 1
+        return delay, size
+                
     @staticmethod
     def extract_author(local_dict):
-        if 'upload_index' in local_dict:
-            index = local_dict['upload_index']
+        if 'base_gen' in local_dict['content']:
+            base_gen = local_dict['content']['base_gen']
         else:
-            index = 0
-        return "{}-{}".format(index, local_dict['author'][:3])
+            base_gen = "?"
+        return "{}-{}".format(base_gen, local_dict['author'][:3])
 
     @staticmethod
     def size_in_char(block):
@@ -116,9 +128,16 @@ class FileLogger:
         self.zero = 0
     def print_chain(self, chain):
         with open(self.__chain_path, "w") as f:
-            f.write("index\tpre-hash\tthis-hash\tminer\tlocal_lists\n")
+            f.write("#\tP-Hash\tHash\tMiner\tLocal_weights\n")
+            sum_delay = 0.0
+            sum_size = 0
             for block in chain:
                 f.write("{}\t{}\t{}\t{}\t{}\n".format(block.index, block.prev_hash[:6], block.hash[:6], block.miner[:6], block.print_list()))
+                delay, size = block.delay_stat()
+                sum_delay += delay
+                sum_size += size
+            if size > 0 :
+                f.write("\nAvg gap between Base-block and Includer-block is {:.2f}\n".format(sum_delay / sum_size))
     def log(self, tag, content):
         with open(self.__log_path, "a+") as f:
             f.write("{:.5f} [{}] \n{}\n\n".format(genTimestamp() - self.zero, tag, content))

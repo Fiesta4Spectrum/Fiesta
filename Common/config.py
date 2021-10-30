@@ -1,5 +1,5 @@
 # FILE LOG ENABLE
-LOG_POOL = False
+LOG_POOL = True
 LOG_MINER = True
 LOG_CHAIN = True
 LOG_REWARD = True
@@ -11,16 +11,15 @@ POW_ENABLE = True # false will disable the difficulty check which we do not care
 REPRODUCIBILITY = True
 
 # @EDGE_SIM related 
-EDGE_TRAIN_INTERVAL = 1     # seconds between two round
-MAX_UPLOAD_DELAY = 0        # seconds of max delay before upload trained local, 0 for no delay
-MAX_INIT_DELAY = 0         # seconds of max delay before init an edge device, 0 for no delay
+EDGE_HTTP_INTERVAL = 1     # seconds between two round
+ASYNC_SIM = True            # enable async simulation
 
 # @MINER related 
 MINER_REG_INTERVAL = 19
 GENESIS_HASH = "genesis_hash"
 BLOCK_GEN_INTERVAL = 1      # seconds between mining
-STRICT_BLOCK_SIZE = False    # True: each block size will be max except #1 = min
-                            # False: each block size will be min~max, except #1 = min
+STRICT_BLOCK_SIZE = False    # True: each block size will be max
+                            # False: each block size will be min~max
 ONE_AUTHOR_ONE_LOCAL = True
 
 # @SEED server related 

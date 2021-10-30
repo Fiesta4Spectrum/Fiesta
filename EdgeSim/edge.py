@@ -30,8 +30,6 @@ usage:
 DATA_PARALLEL = 8
 SIMPLE_PRINT = True
 
-task_name = None
-global_gen = -1
 myName = genName()
 
 class DataFeeder:                   # emulate each round dataset feeder
@@ -76,8 +74,16 @@ class DataFeeder:                   # emulate each round dataset feeder
     def size(self):
         return len(self.fullList)
 
-def fetchList(addr):
-    response = requests.get(addr + CONFIG.API_GET_MINER)
+def fetch_list(addr):
+
+    while True:
+        try:
+            response = requests.get(addr + CONFIG.API_GET_MINER)
+            break
+        except requests.exceptions.ConnectionError:
+            print_log("requests", "fails to connect to seed")
+            continue
+
     full_list = response.json()['peers']
     full_list.sort()
     if miner_access > 0:
@@ -87,39 +93,40 @@ def fetchList(addr):
     else:
         return full_list
 
-def getLatest(addr_list):
+def get_valid_global(addr_list):
+
+    sleep(CONFIG.EDGE_HTTP_INTERVAL)
+    while True:
+        addr = random.choice(addr_list)
+        try:
+            response = requests.get(addr + CONFIG.API_GET_GLOBAL)
+            break
+        except requests.exceptions.ConnectionError:
+            print_log("requests", "fails to connect to" + addr)
+            continue
+    return response.json()
+
+def get_latest(addr_list):
     global task_name
     global global_gen
-    global tsundere
+    global mode
 
     while True:
-        sleep(CONFIG.EDGE_TRAIN_INTERVAL)
-        while True:
-            addr = random.choice(addr_list)
-            try:
-                response = requests.get(addr + CONFIG.API_GET_GLOBAL)
-                break
-            except requests.exceptions.ConnectionError:
-                print_log("requests", "fails to connect to" + addr)
-                continue
-
-        data = response.json()
+        data = get_valid_global(addr_list)
         new_task_name = data['seed_name']
         new_global_gen = data['generation']
-        if new_task_name != task_name:              # accept global if it is a new task
+
+        if new_task_name != task_name or new_global_gen - global_gen >= 1:          
+            # accept global if it is a new task
             break
-        if new_global_gen - global_gen >= tsundere: # accept global if fullfill our tsundere reqirement (min global update between trains)
-            break
-        if new_global_gen - global_gen > 0:
-            print("spin because I am a tsundere")   # tsundere is waiting for a higher generation global model
-            continue
-        print("spin because {} is an old guy".format(addr))
+        print_log("spin", "current global has been {}ed".format(mode))
+
     task_name = new_task_name
     global_gen = new_global_gen
     
     return data['weight'], data['preprocPara'], data['trainPara'], data['layerStructure']
 
-def pushTrained(size, lossDelta, weight, addr_list, index):
+def push_trained(size, lossDelta, weight, addr_list, index):
 
     MLdata = {
         'stat' : {  'size' : size,
@@ -147,7 +154,7 @@ def pushTrained(size, lossDelta, weight, addr_list, index):
 
     # send to server
 
-class getDataSet(torch.utils.data.Dataset):
+class get_data_set(torch.utils.data.Dataset):
     def __init__(self, myList, layerStructure):
         self.myList = myList
         self.inputSize = layerStructure[0]
@@ -162,14 +169,14 @@ class getDataSet(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.myList) 
 
-def localTraining(model, data, para, layerStructure):
+def local_training(model, data, para, layerStructure):
     batch = para['batch']
     lrate = para['lr']
     epoch = para['epoch']
     lossf = para['loss']
     opt = para['opt']
     size = len(data)
-    trainSet = getDataSet(data, layerStructure)
+    trainSet = get_data_set(data, layerStructure)
     trainLoader = torch.utils.data.DataLoader(  trainSet,
                                                 batch_size=batch,
                                                 shuffle=True,
@@ -197,11 +204,11 @@ def localTraining(model, data, para, layerStructure):
 
     return size, avg_loss_begin - avg_loss_end, save_weights_into_dict(model)
 
-def localTester(model, data, para, layerStructure):
+def local_tester(model, data, para, layerStructure):
     batch = para['batch']
     lossf = para['loss']
     size = len(data)
-    testSet = getDataSet(data, layerStructure)
+    testSet = get_data_set(data, layerStructure)
     testLoader = torch.utils.data.DataLoader( testSet,
                                               batch_size=batch,
                                               shuffle=True,
@@ -223,10 +230,6 @@ def train_mode(train_file):
     global task_name
     global global_gen
     global mode
-
-    # shift in init phase
-    if CONFIG.MAX_INIT_DELAY:
-        sleep(random.uniform(0.0, float(CONFIG.MAX_INIT_DELAY)))
     
     localFeeder = DataFeeder(train_file)
     index = 0
@@ -234,45 +237,66 @@ def train_mode(train_file):
     # full life cycle of one round ==============================
         rounds -= 1
         index += 1
+
         # miner communication
-        minerList = fetchList(CONFIG.SEED_ADDR)
-        modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList)
+        minerList = fetch_list(CONFIG.SEED_ADDR)
+        modelWeights, preprocPara, trainPara, layerStructure = get_latest(minerList)
         print("performing {}-th {} based on task {} # {}".format(index, mode, task_name, global_gen))
+
+        # async simulation
+        if CONFIG.ASYNC_SIM:
+            tsundere_is_moe(minerList)
 
         # model init, should have built according to miner response
         myModel = FNNModel(layerStructure)
         load_weights_from_dict(myModel, modelWeights)
+
         # data preprocessing setup
         localFeeder.setPreProcess(preprocPara)
+
         # local training
-        size, lossDelta, weight = localTraining(myModel, localFeeder.fetch(fetch_size_per), trainPara, layerStructure)
+        size, lossDelta, weight = local_training(myModel, localFeeder.fetch(fetch_size_per), trainPara, layerStructure)
+
         # send back to server
-        # shift in upload phase
-        if CONFIG.MAX_UPLOAD_DELAY:
-            sleep(random.uniform(0.0, float(CONFIG.MAX_UPLOAD_DELAY)))
-        pushTrained(size, lossDelta, weight, minerList, index)
+        push_trained(size, lossDelta, weight, minerList, index)
     # end of the life cycle =====================================
 
     print("local dataset training done!")
     # TODO loss estimation and map visualization
 
+def tsundere_is_moe(addr_list):
+    global tsundere
+    if tsundere <= 1:
+        sleep(random.uniform(0.0, 2.0))     # sleep to balance with the 1s http_requests_interval granularity
+        return
+    latest_global = get_valid_global(addr_list)
+    while latest_global['generation'] - global_gen < tsundere - 1:
+        print_log("spin", "I am a tsundere")
+        latest_global = get_valid_global(addr_list)
+    
+
 def test_mode(test_file):
     global fetch_size_per
 
+    index = 0
     localFeeder = DataFeeder(test_file)
     while True: # none-stop test
+        index += 1
         # miner communication
-        minerList = fetchList(CONFIG.SEED_ADDR)
-        modelWeights, preprocPara, trainPara, layerStructure = getLatest(minerList)
+        minerList = fetch_list(CONFIG.SEED_ADDR)
+        modelWeights, preprocPara, trainPara, layerStructure = get_latest(minerList)
+        print("performing {}-th {} based on task {} # {}".format(index, mode, task_name, global_gen))
+
         # model init, should have built according to miner response
         myModel = FNNModel(layerStructure)
         load_weights_from_dict(myModel, modelWeights)
+
         # data preprocessing setup
         localFeeder.setPreProcess(preprocPara)
+
         # local test
-        loss = localTester(myModel, localFeeder.fetch(fetch_size_per), trainPara, layerStructure)
+        loss = local_tester(myModel, localFeeder.fetch(fetch_size_per), trainPara, layerStructure)
         print_loss(loss)
-        # TODO some test
 
 def print_loss(loss):
     output_path = "DecentSpec/Test/test_loss_{}.txt".format(myName)
@@ -287,6 +311,8 @@ def print_loss(loss):
 
 print("***** NODE init, I am edge {} *****".format(myName))
 
+task_name = None
+global_gen = -1
 fetch_size_per = 0
 rounds = 0
 mode = "none"

@@ -118,8 +118,9 @@ def new_local():
         resp.pop(SPREAD_FLAG)                               # avoid useless repeat spread
         if not LOCAL_HASH_FIELD in resp:
             resp[LOCAL_HASH_FIELD] = hashValue(resp)
-        thread = Thread(target=spread_to_peers, args=[resp])
-        thread.start()
+        # thread = Thread(target=spread_to_peers, args=[resp])
+        # thread.start()
+        spread_to_peers(resp)
     else:
         if not LOCAL_HASH_FIELD in resp:
             resp[LOCAL_HASH_FIELD] = hashValue(resp)
@@ -198,7 +199,7 @@ def new_block():
             consensus()
         return "rejected", 400
     # if this new comer is accepted
-    powIntr.set()                                       # reset my pow
+    powIntr.set()                                       # hangup pow
     print_log("new_block", "new outcoming block #{} accepted".format(new_block.index))
     myPool.remove(new_block.local_list)                  # remove the used local in the new block
     powIntr.rst()
@@ -259,9 +260,6 @@ def mine():
             continue
 
         if myPool.size >= actual_threshold():
-            # PARTITION EXP FIELD
-            partition_exe()
-            # ===================
             print_log("mine", "enough local model, start pow")
             new_block = gen_candidate_block(myPool.get_pool_list())
             if new_block:
@@ -291,10 +289,7 @@ def gen_candidate_block(local_list):
         print_log('pow', 'not allowed!')
         return None
     
-    if myChain.size == 1:
-        local_list = local_list[:BLOCK_MIN_THRESHOLD].copy()    # first block use the min threshold
-    else:
-        local_list = local_list[:BLOCK_MAX_THRESHOLD].copy()    # other block use the max threshold
+    local_list = local_list[:BLOCK_MAX_THRESHOLD].copy()
 
     new_block = Block(
         local_list,
@@ -308,7 +303,6 @@ def gen_candidate_block(local_list):
 
     # proof of work
     cur_hash = new_block.compute_hash()
-    difficulty = myChain.difficulty
     while not difficultyCheck(cur_hash, new_block.difficulty):
         new_block.nonce += 1
         cur_hash = new_block.compute_hash()
