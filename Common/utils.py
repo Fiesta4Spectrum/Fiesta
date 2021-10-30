@@ -21,6 +21,11 @@ class Intrpt:
     def rst(self):
         with self.lock:
             self.flag = False
+    def check_and_rst(self):
+        with self.lock:
+            ret = self.flag
+            self.flag = False
+        return ret
     def set(self):
         with self.lock:
             self.flag = True

@@ -7,6 +7,7 @@ from flask import Flask, request
 
 import DecentSpec.Common.config as CONFIG
 from DecentSpec.Common.utils import difficultyCheck, genName, genTimestamp, hashValue, print_log, Intrpt
+from DecentSpec.Miner.asyncPost import AsyncPost
 from DecentSpec.Miner.blockChain import Block, BlockChain, FileLogger
 from DecentSpec.Miner.pool import Pool
 from DecentSpec.Miner.para import Para
@@ -118,26 +119,13 @@ def new_local():
         resp.pop(SPREAD_FLAG)                               # avoid useless repeat spread
         if not LOCAL_HASH_FIELD in resp:
             resp[LOCAL_HASH_FIELD] = hashValue(resp)
-        # thread = Thread(target=spread_to_peers, args=[resp])
-        # thread.start()
-        spread_to_peers(resp)
+        AsyncPost(accessible_miners(), resp, CONFIG.API_POST_LOCAL).start()
     else:
         if not LOCAL_HASH_FIELD in resp:
             resp[LOCAL_HASH_FIELD] = hashValue(resp)
     myPool.add(resp)
     return "new local model received", 201
 
-def spread_to_peers(local_model):
-    
-    print_log("new_local", "gonna share this local model")
-    for peer in accessible_miners():
-        try:
-            requests.post(
-                url = peer + CONFIG.API_POST_LOCAL,
-                json = local_model
-            )
-        except requests.exceptions.ConnectionError:
-            print_log("requests", "fails to connect to " + peer)
 
 @miner.route(CONFIG.API_GET_POOL, methods=['GET'])
 def get_pool():
@@ -202,7 +190,6 @@ def new_block():
     powIntr.set()                                       # hangup pow
     print_log("new_block", "new outcoming block #{} accepted".format(new_block.index))
     myPool.remove(new_block.local_list)                  # remove the used local in the new block
-    powIntr.rst()
     return "added", 200
 
 # register thread setup ============================
@@ -285,7 +272,7 @@ def gen_candidate_block(local_list):
     global myPara
     global myName
     
-    if powIntr.check():
+    if powIntr.check_and_rst():
         print_log('pow', 'not allowed!')
         return None
     
@@ -306,7 +293,7 @@ def gen_candidate_block(local_list):
     while not difficultyCheck(cur_hash, new_block.difficulty):
         new_block.nonce += 1
         cur_hash = new_block.compute_hash()
-        if powIntr.check():
+        if powIntr.check_and_rst():
             print_log('pow', 'interrupted!')
             return None
     new_block.hash = cur_hash
@@ -334,7 +321,6 @@ def consensus():
                     myChain.replace(new_chain)
                     print_log("consensus", "get a longer chain from else where")
                     myPool.flush()                                          # flush my pool
-                    powIntr.rst()
                     i_am = False
                     max_len = resp['length']
         except requests.exceptions.ConnectionError:
@@ -342,14 +328,7 @@ def consensus():
     return i_am
 
 def announce_new_block(new_block):
-    for peer in accessible_miners():
-        try:
-            requests.post(
-                url = peer + CONFIG.API_POST_BLOCK,
-                json = new_block.get_block_dict(shrank=False)
-            )
-        except requests.exceptions.ConnectionError:
-            print_log("requests", "fails to connect to " + peer)
+    AsyncPost(accessible_miners(), new_block.get_block_dict(shrank=False), CONFIG.API_POST_BLOCK).start()
 
 # helper methods ===================================
 
