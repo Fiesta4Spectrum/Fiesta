@@ -211,7 +211,7 @@ def local_tester(model, data, para, layerStructure):
     testSet = get_data_set(data, layerStructure)
     testLoader = torch.utils.data.DataLoader( testSet,
                                               batch_size=batch,
-                                              shuffle=True,
+                                              shuffle=False,
                                               num_workers=DATA_PARALLEL)
     lossFunc = nn.MSELoss()
     with torch.no_grad():
