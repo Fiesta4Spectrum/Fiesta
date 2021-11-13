@@ -149,6 +149,7 @@ def get_global():
     data = {    'weight' : latest.get_global(),
                 'preprocPara' : para.preproc,
                 'trainPara' : para.train,
+                'samplePara' : para.sample_para,
                 'layerStructure' : para.nn_structure,
                 'seed_name' : para.seed_name,
                 'generation' : latest.index,
@@ -364,7 +365,6 @@ def extract_block_from_dict(resp):
     template.nonce = resp['nonce']
     template.difficulty = resp['difficulty']
     template.seed_name = resp['seed_name']
-    template.sample_para = resp['sample_para']
 
     template.local_hash = resp['local_hash']
     template.new_global = resp['new_global']
