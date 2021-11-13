@@ -14,6 +14,7 @@ class Block:
         self.time_stamp = time_stamp
         self.nonce = 0
         self.difficulty = para.difficulty
+        self.sample_para = para.sample_para
         self.seed_name = para.seed_name         # since every miner has a copy of the full seed parameters in myPara
                                                 # full aggregation parameters is replaced with the seed name, which is shorter
 

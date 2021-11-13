@@ -343,7 +343,8 @@ def extract_para_from_dict(resp):
         seeder=resp.json()['from'],
         seed_name=resp.json()['name'],
         init_weight=resp.json()['seedWeight'],
-        nn_structure=para['layerStructure']
+        nn_structure=para['layerStructure'],
+        sample_para=para['samplePara']
     )
 
 def extract_block_from_dict(resp):
@@ -354,7 +355,7 @@ def extract_block_from_dict(resp):
         resp['prev_hash'],
         resp['time_stamp'],
         resp['index'],
-        myPara,     # dummy and useless here
+        myPara,     # dummy and as a placeholder here
         resp['miner'],
         resp['base_global'],
         template=True
@@ -363,6 +364,7 @@ def extract_block_from_dict(resp):
     template.nonce = resp['nonce']
     template.difficulty = resp['difficulty']
     template.seed_name = resp['seed_name']
+    template.sample_para = resp['sample_para']
 
     template.local_hash = resp['local_hash']
     template.new_global = resp['new_global']

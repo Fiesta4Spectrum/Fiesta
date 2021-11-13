@@ -53,6 +53,7 @@ myPara = {
     'alpha' : SEED.ALPHA,
     'preprocPara' : SEED.PREPROC_PARA,
     'trainPara' : SEED.TRAIN_PARA,
+    'samplePara' : SEED.SAMPLE_PARA,
     'layerStructure' : layerStructure,
     'difficulty' : SEED.DIFFICULTY,
 } 
