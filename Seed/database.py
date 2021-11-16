@@ -123,8 +123,10 @@ class RewardDB:
                 except requests.exceptions.ConnectionError:
                     print_log("requests", "fails to connect to " + miner)
             print("longest chain from {}".format(fromwhom))
-            latest_global_weight = longest_chain[-1]['new_global']
-            pickle.dump(latest_global_weight, CONFIG.PICKLE_NAME)
+            if len(longest_chain) > 0:
+                latest_global_weight = longest_chain[-1]['new_global']
+                with open(CONFIG.PICKLE_NAME,"wb") as f:
+                    pickle.dump(latest_global_weight, f)
             self.updateReward(longest_chain)
             self.__print()
             time.sleep(CONFIG.SEED_CHAIN_SCAN_INTERVAL)

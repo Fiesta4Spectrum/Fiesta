@@ -32,8 +32,18 @@ SIMPLE_PRINT = True
 
 myName = genName()
 
+def string2floatList(raw_string, tail_dup):
+    ret = list( map(float, raw_string.split(" ")))
+    if tail_dup == 0:
+        return ret
+    tail = ret[-1]
+    for i in range(0, tail_dup):
+        ret.append(tail)
+    return ret
+    
+
 class DataFeeder:                   # emulate each round dataset feeder
-    def __init__(self, filePath):
+    def __init__(self, filePath, tail_dup = 0):
         self.st_avg = []
         self.st_dev = []
         f = open(filePath, "r")
@@ -41,7 +51,7 @@ class DataFeeder:                   # emulate each round dataset feeder
         f.close()
         print(f"file {filePath} is read into memory")
         print(f"totally {len(rawList)} lines")
-        self.fullList = list(map(   lambda x: list( map(float, x.split(" "))), 
+        self.fullList = list(map(   lambda x : string2floatList(x, tail_dup), 
                                     rawList))
         self.ctr = 0
     def setPreProcess(self, para):
@@ -142,6 +152,7 @@ def push_trained(size, lossDelta, weight, addr_list, index):
         'type' : 'localModelWeight',
         'plz_spread' : 1,
         'upload_index' : index, # the i-th local weights uploaded by this edge, starts from 1
+        'seed_name' : task_name,
     }
     while True:
         addr = random.choice(addr_list)
@@ -254,6 +265,8 @@ def train_mode(train_file):
         load_weights_from_dict(myModel, modelWeights)
 
         # data preprocessing setup
+        if layerStructure[-1] > 1:
+            localFeeder = DataFeeder(train_file, layerStructure[-1] - 1)
         localFeeder.setPreProcess(preprocPara)
 
         # local training

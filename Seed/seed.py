@@ -9,7 +9,7 @@ from importlib import import_module
 
 from DecentSpec.Seed.database import MinerDB, RewardDB
 from DecentSpec.Common.modelTemplate import FNNModel 
-from DecentSpec.Common.utils import load_weights_from_dict, print_log, save_weights_into_dict, genName
+from DecentSpec.Common.utils import load_weights_from_dict, print_log, save_weights_into_dict, genName, tensor2dict
 import DecentSpec.Common.config as CONFIG
 
 # from DecentSpec.Common.tasks import TV_CHANNEL_TASK as SEED
@@ -93,12 +93,17 @@ def migrateFromDump():
     global layerStructure
     # TODO use the previous dumped global model
     ret = FNNModel(layerStructure)
-    expended_weight = pickle.load(CONFIG.PICKLE_NAME)
+    with open(CONFIG.PICKLE_NAME, "rb") as f:
+        expended_weight = pickle.load(f)
+    # print("[migration] before:")
+    # print(expended_weight)
     first_neuron_weight = expended_weight['ol.weight'][0]
     first_neuron_bias = expended_weight['ol.bias'][0]
     for i in range(0, 7):
         expended_weight['ol.weight'].append(first_neuron_weight)
         expended_weight['ol.bias'].append(first_neuron_bias)
+    # print("[migration] after:")
+    # print(expended_weight)
     load_weights_from_dict(ret, expended_weight)
     return ret
 
@@ -111,7 +116,7 @@ def flush():
     global layerStructure
     global SEED
 
-    SEED = getattr(import_module("DecentSpec.Common.tasks"), "MULTI_TV_REGRESSION_TASK")
+    SEED = getattr(import_module("DecentSpec.Common.tasks"), "MULTI_TV_CHANNEL_TASK")
 
     layerStructure = SEED.DEFAULT_NN_STRUCTURE
 

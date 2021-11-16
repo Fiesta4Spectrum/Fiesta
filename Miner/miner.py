@@ -92,11 +92,13 @@ def reseed():
     global myPool
     global myChain
     global myPara
+    global powIntr
     
     seed = request.get_json()
     if not valid_seed(seed):
         print_log("reseed", "invalid seed")
         return "invalid", 400
+    powIntr.set()
     myPool.flush()
     myChain.flush()
     myPara = extract_para_from_dict(seed)
@@ -219,7 +221,7 @@ def register():
         if myAddr in myPeers:
             myPeers.remove(myAddr)
         if myPara == None:
-            myPara = extract_para_from_dict(resp)
+            myPara = extract_para_from_dict(resp.json())
             myChain.create_genesis_block(myPara)
     else:
         # TODO when http get fails
@@ -333,17 +335,17 @@ def announce_new_block(new_block):
 
 # helper methods ===================================
 
-def extract_para_from_dict(resp):
+def extract_para_from_dict(resp_dict):
     # extract para from a json
-    para = resp.json()['para']
+    para = resp_dict['para']
     return Para(
         preproc=para['preprocPara'],
         train=para['trainPara'],
         alpha=para['alpha'],
         difficulty=para['difficulty'],
-        seeder=resp.json()['from'],
-        seed_name=resp.json()['name'],
-        init_weight=resp.json()['seedWeight'],
+        seeder=resp_dict['from'],
+        seed_name=resp_dict['name'],
+        init_weight=resp_dict['seedWeight'],
         nn_structure=para['layerStructure'],
         sample_para=para['samplePara']
     )
@@ -382,7 +384,7 @@ def valid_seed(new_seed):
 
 def valid_model(new_local):
     # TODO validate the new model from an edge device
-    return True
+    return new_local['seed_name'] == myPara.seed_name
 
 def valid_hash(new_block):
     if new_block.index == 0:
