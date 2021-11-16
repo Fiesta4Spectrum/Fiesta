@@ -6,7 +6,7 @@ LOG_REWARD = True
 
 # COMMON 
 DEFAULT_NAME_LENGTH = 10
-SEED_ADDR = "http://127.0.0.1:5000"
+SEED_ADDR = "http://api.decentspec.org:5000"
 POW_ENABLE = True # false will disable the difficulty check which we do not care hash anymore
 REPRODUCIBILITY = True
 
@@ -23,6 +23,7 @@ STRICT_BLOCK_SIZE = False    # True: each block size will be max
 ONE_AUTHOR_ONE_LOCAL = True
 
 # @SEED server related 
+PICKLE_NAME = "latest_global.pickle"
 SEED_CHAIN_SCAN_INTERVAL = 20     # compute reward per 20s
 SEED_LEASING_COUNTDOWN = 1    # rate of leasing timer reduction
 SEED_LEASING_INIT = 20
@@ -43,3 +44,4 @@ API_UPDATE_SEED = '/seed_update'
 
 API_GET_MINER = '/miner_peers'
 API_REGISTER = '/register'
+API_TV_to_MULTITV = '/reseed_to_mtv'

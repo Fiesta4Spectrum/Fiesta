@@ -230,12 +230,14 @@ def train_mode(train_file):
     global task_name
     global global_gen
     global mode
-    
+    global forever_flag
+
     localFeeder = DataFeeder(train_file)
     index = 0
-    while localFeeder.haveData() and (rounds > 0):
+    while (localFeeder.haveData() and (rounds > 0)) or forever_flag:
     # full life cycle of one round ==============================
-        rounds -= 1
+        if not forever_flag:
+            rounds -= 1
         index += 1
 
         # miner communication
@@ -326,6 +328,7 @@ if len(sys.argv) >= 5:
     file_path = sys.argv[2]
     fetch_size_per = int(sys.argv[3])
     rounds = int(sys.argv[4])
+    forever_flag = rounds == 0
     if len(sys.argv) == 6:
         if sys.argv[5].startswith("R"):
             miner_access = int(sys.argv[5][1:])

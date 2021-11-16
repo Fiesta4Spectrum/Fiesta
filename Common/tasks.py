@@ -1,6 +1,7 @@
 # TV-channel spatial prediction regression
 
 class TV_CHANNEL_TASK:
+    NAME = "tv_regression"
     DIFFICULTY = 3
     ALPHA = 1
     DEFAULT_NN_STRUCTURE = [2,50,50,50,1]
@@ -16,17 +17,54 @@ class TV_CHANNEL_TASK:
         'batch' : 10,
         'lr'    : 0.001,
         'opt'   : 'Adam',
-        'epoch' : 3,                            # local epoch Num
+        'epoch' : 10,                            # local epoch Num
         'loss'  : 'MSE',
     }
     FULL_FILE_PATH = "../Dataset/GPS_power.dat"
 
+class MULTI_TV_CHANNEL_TASK:
+    NAME = "mtv_regression"
+    DIFFICULTY = 3
+    ALPHA = 1
+    DEFAULT_NN_STRUCTURE = [2,50,50,50,8]
+    SAMPLE_PARA = {
+        'center_freq' : 525000000,
+        'bandwidth'   : 50000000,
+    }
+    PREPROC_PARA = {
+        'avg' : [43.07850074790703, -89.3982621182465, -58.52785514280172
+                                                    , -58.52785514280172
+                                                    , -58.52785514280172
+                                                    , -58.52785514280172
+                                                    , -58.52785514280172
+                                                    , -58.52785514280172
+                                                    , -58.52785514280172
+                                                    , -58.52785514280172],
+        'std' : [0.026930841086101193, 0.060267757907425355, 7.434576197607559
+                                                            , 7.434576197607559
+                                                            , 7.434576197607559
+                                                            , 7.434576197607559
+                                                            , 7.434576197607559
+                                                            , 7.434576197607559
+                                                            , 7.434576197607559
+                                                            , 7.434576197607559],
+    }
+    TRAIN_PARA = {
+        'batch' : 10,
+        'lr'    : 0.001,
+        'opt'   : 'Adam',
+        'epoch' : 10,                            # local epoch Num
+        'loss'  : 'MSE',
+    }
+    FULL_FILE_PATH = "../Dataset/GPS_power.dat" # not correct actually
+
 class ANOMALY_DETECTION_TASK:
+    NAME = "lte_anomaly_detection"
     DIFFICULTY = 3
     ALPHA = 1
     DEFAULT_NN_STRUCTURE = [256,64,16,64,256]
     SAMPLE_PARA = {
-        'center_freq' : 525000000,
+        'center_freq' : 725000000,
         'bandwidth'   : 50000000,
     }
     PREPROC_PARA = {

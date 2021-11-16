@@ -2,13 +2,14 @@ import sys
 import json
 import requests
 import time
+import pickle
 from flask import Flask, request
 import threading
 from importlib import import_module
 
 from DecentSpec.Seed.database import MinerDB, RewardDB
 from DecentSpec.Common.modelTemplate import FNNModel 
-from DecentSpec.Common.utils import print_log, save_weights_into_dict, genName
+from DecentSpec.Common.utils import load_weights_from_dict, print_log, save_weights_into_dict, genName
 import DecentSpec.Common.config as CONFIG
 
 # from DecentSpec.Common.tasks import TV_CHANNEL_TASK as SEED
@@ -46,7 +47,10 @@ print("***** NODE init, I am seed {} *****".format(myName))
 myMembers = MinerDB()
 
 layerStructure = SEED.DEFAULT_NN_STRUCTURE
-seedName = "TV_Channel_regression_v1"    # name of this seed
+def genSeedName():
+    global seedName
+    seedName = SEED.NAME + "_" + genName(3)
+genSeedName()
 seedModel = FNNModel(layerStructure)
 
 myPara = {
@@ -85,20 +89,47 @@ def reg_miner():
     # print(ret["para"])
     return json.dumps(ret)
 
+def migrateFromDump():
+    global layerStructure
+    # TODO use the previous dumped global model
+    ret = FNNModel(layerStructure)
+    expended_weight = pickle.load(CONFIG.PICKLE_NAME)
+    first_neuron_weight = expended_weight['ol.weight'][0]
+    first_neuron_bias = expended_weight['ol.bias'][0]
+    for i in range(0, 7):
+        expended_weight['ol.weight'].append(first_neuron_weight)
+        expended_weight['ol.bias'].append(first_neuron_bias)
+    load_weights_from_dict(ret, expended_weight)
+    return ret
+
 # ask this new seed to reseed the network
-# TODO change the consensus to seed prioritized instead of length preferred
-# TODO currently is GET, change to POST later
-@seed.route('/reseed', methods=['GET'])
+@seed.route(CONFIG.API_TV_to_MULTITV, methods=['GET'])
 def flush():   
     global myMembers
     global seedModel
     global myPara
-    seedModel = FNNModel(layerStructure)
-    globalWeight = save_weights_into_dict(seedModel)
+    global layerStructure
+    global SEED
+
+    SEED = getattr(import_module("DecentSpec.Common.tasks"), "MULTI_TV_REGRESSION_TASK")
+
+    layerStructure = SEED.DEFAULT_NN_STRUCTURE
+
+    myPara = {
+        'alpha' : SEED.ALPHA,
+        'preprocPara' : SEED.PREPROC_PARA,
+        'trainPara' : SEED.TRAIN_PARA,
+        'samplePara' : SEED.SAMPLE_PARA,
+        'layerStructure' : layerStructure,
+        'difficulty' : SEED.DIFFICULTY,
+    }
+
+    seedModel = migrateFromDump()
+    genSeedName() # change the seed name
     post_object = {
         'name' : seedName,
         'from' : myName,
-        'seedWeight' : globalWeight,
+        'seedWeight' : save_weights_into_dict(seedModel),
         'para' : myPara,
         'peers' : myMembers.getList(),
     }
