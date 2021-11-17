@@ -9,7 +9,7 @@ from importlib import import_module
 
 from DecentSpec.Seed.database import MinerDB, RewardDB
 from DecentSpec.Common.modelTemplate import FNNModel 
-from DecentSpec.Common.utils import load_weights_from_dict, print_log, save_weights_into_dict, genName, tensor2dict
+from DecentSpec.Common.utils import genPickleName, load_weights_from_dict, print_log, save_weights_into_dict, genName, tensor2dict
 import DecentSpec.Common.config as CONFIG
 
 # from DecentSpec.Common.tasks import TV_CHANNEL_TASK as SEED
@@ -48,10 +48,10 @@ myMembers = MinerDB()
 
 layerStructure = SEED.DEFAULT_NN_STRUCTURE
 def genSeedName():
-    global seedName
-    seedName = SEED.NAME + "_" + genName(3)
+    global mySeedName
+    mySeedName = SEED.NAME + "_" + genName(3)
 genSeedName()
-seedModel = FNNModel(layerStructure)
+mySeedModel = FNNModel(layerStructure)
 
 myPara = {
     'alpha' : SEED.ALPHA,
@@ -61,6 +61,22 @@ myPara = {
     'layerStructure' : layerStructure,
     'difficulty' : SEED.DIFFICULTY,
 } 
+
+def stateSaver():
+    global mySeedName
+    global myName
+    global mySeedModel
+    global myPara
+    while True:
+        time.sleep(CONFIG.PICKLE_INTERVAL)
+        dump_dict = {
+            'seed_name' : mySeedName,
+            'name' : myName,
+            'seed_model' : mySeedModel,
+            'para' : myPara,
+        }
+        with open(genPickleName(myName, CONFIG.PICKLE_SEED), "wb") as f:
+            pickle.dump(dump_dict, f)
 
 rewardRecord = RewardDB(myMembers, myPara, myName)
 
@@ -75,12 +91,14 @@ def get_peers():
 def reg_miner():
     global myMembers
     global myPara
+    global mySeedName
+
     reg_data = request.get_json()
     myMembers.regNew(reg_data["name"], reg_data["addr"])
     ret = {
-        'name' : seedName,
+        'seed_name' : mySeedName,
         'from' : myName,
-        'seedWeight' : save_weights_into_dict(seedModel),
+        'seedWeight' : save_weights_into_dict(mySeedModel),
         'para' : myPara,
         'peers' : myMembers.getList(),
     }
@@ -93,7 +111,7 @@ def migrateFromDump():
     global layerStructure
     # TODO use the previous dumped global model
     ret = FNNModel(layerStructure)
-    with open(CONFIG.PICKLE_NAME, "rb") as f:
+    with open(CONFIG.PICKLE_GLOBAL, "rb") as f:
         expended_weight = pickle.load(f)
     # print("[migration] before:")
     # print(expended_weight)
@@ -111,7 +129,7 @@ def migrateFromDump():
 @seed.route(CONFIG.API_TV_to_MULTITV, methods=['GET'])
 def flush():   
     global myMembers
-    global seedModel
+    global mySeedModel
     global myPara
     global layerStructure
     global SEED
@@ -129,12 +147,12 @@ def flush():
         'difficulty' : SEED.DIFFICULTY,
     }
 
-    seedModel = migrateFromDump()
+    mySeedModel = migrateFromDump()
     genSeedName() # change the seed name
     post_object = {
-        'name' : seedName,
+        'name' : mySeedName,
         'from' : myName,
-        'seedWeight' : save_weights_into_dict(seedModel),
+        'seedWeight' : save_weights_into_dict(mySeedModel),
         'para' : myPara,
         'peers' : myMembers.getList(),
     }
@@ -160,6 +178,10 @@ if __name__ == '__main__':
     # memListThread = threading.Thread(target=memberList)
     # memListThread.setDaemon(True)
     # memListThread.start()
+
+    saveThread = threading.Thread(target=stateSaver)
+    saveThread.setDaemon(True)
+    saveThread.start()
 
     seed.run(host='0.0.0.0', port=int(myPort))
 

@@ -4,6 +4,14 @@ LOG_MINER = True
 LOG_CHAIN = True
 LOG_REWARD = True
 
+# state save realted
+PICKLE_INTERVAL = 10    # reserve the miner state per 10s. 
+                        # seed has no state, so only reserve once
+                        # but the latest global will be pickled in database.py
+PICKLE_GLOBAL = "global"
+PICKLE_MINER = "miner"
+PICKLE_SEED = "seed"
+
 # COMMON 
 DEFAULT_NAME_LENGTH = 10
 SEED_ADDR = "http://api.decentspec.org:5000"
@@ -23,7 +31,6 @@ STRICT_BLOCK_SIZE = False    # True: each block size will be max
 ONE_AUTHOR_ONE_LOCAL = True
 
 # @SEED server related 
-PICKLE_NAME = "latest_global.pickle"
 SEED_CHAIN_SCAN_INTERVAL = 20     # compute reward per 20s
 SEED_LEASING_COUNTDOWN = 1    # rate of leasing timer reduction
 SEED_LEASING_INIT = 20

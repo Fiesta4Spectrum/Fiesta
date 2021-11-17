@@ -53,6 +53,11 @@ def difficultyCheck(hash, difficulty):
     else:
         return True
 
+def genPickleName(id, content, remark=None):
+    if (remark == None):
+        return "{}_{}.pickle".format(content, id[0:5])
+    return "{}_{}_{}.pickle".format(content, id[0:5], remark)
+
 # store and load weights
 def save_weights_into_dict(model):
     return tensor2dict(model.state_dict())

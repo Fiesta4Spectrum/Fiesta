@@ -153,6 +153,7 @@ class BlockChain:
         self.logger = logger
 
     def create_genesis_block(self, para):
+        self.flush()
         genesis_block = Block([], CONFIG.GENESIS_HASH, 0, 0, para, para.seeder, None)
         genesis_block.new_global = para.init_weight
         genesis_block.hash = genesis_block.compute_hash()

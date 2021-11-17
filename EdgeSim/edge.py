@@ -292,10 +292,13 @@ def tsundere_is_moe(addr_list):
 
 def test_mode(test_file):
     global fetch_size_per
+    global rounds
 
     index = 0
     localFeeder = DataFeeder(test_file)
-    while True: # none-stop test
+    while forever_flag or rounds > 0: # none-stop test
+        if not forever_flag:
+            rounds -= 1
         index += 1
         # miner communication
         minerList = fetch_list(CONFIG.SEED_ADDR)

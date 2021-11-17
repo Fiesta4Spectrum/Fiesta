@@ -1,3 +1,4 @@
+import pickle
 import sys
 from threading import Thread
 import requests
@@ -6,7 +7,7 @@ import time
 from flask import Flask, request
 
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import difficultyCheck, genName, genTimestamp, hashValue, print_log, Intrpt
+from DecentSpec.Common.utils import difficultyCheck, genName, genPickleName, genTimestamp, hashValue, print_log, Intrpt
 from DecentSpec.Miner.asyncPost import AsyncPost
 from DecentSpec.Miner.blockChain import Block, BlockChain, FileLogger
 from DecentSpec.Miner.pool import Pool
@@ -220,7 +221,7 @@ def register():
         myPeers.sort()
         if myAddr in myPeers:
             myPeers.remove(myAddr)
-        if myPara == None:
+        if myPara == None or myPara.seed_name != resp.json()['seed_name']:
             myPara = extract_para_from_dict(resp.json())
             myChain.create_genesis_block(myPara)
     else:
@@ -233,6 +234,22 @@ def register_thread():
     while True:
         register()
         time.sleep(CONFIG.MINER_REG_INTERVAL)
+
+# periodic state save setup
+
+def stateSaver():
+    global myName
+    global myChain
+    global myPara
+    while True:
+        time.sleep(CONFIG.PICKLE_INTERVAL)
+        dump_dict = {
+            'name' : myName,
+            'chain' : myChain,
+            'para' : myPara,
+        }
+        with open(genPickleName(myName, CONFIG.PICKLE_MINER), "wb") as f:
+            pickle.dump(dump_dict, f)
 
 # pow thread setup =================================
 
@@ -344,7 +361,7 @@ def extract_para_from_dict(resp_dict):
         alpha=para['alpha'],
         difficulty=para['difficulty'],
         seeder=resp_dict['from'],
-        seed_name=resp_dict['name'],
+        seed_name=resp_dict['seed_name'],
         init_weight=resp_dict['seedWeight'],
         nn_structure=para['layerStructure'],
         sample_para=para['samplePara']
@@ -420,5 +437,9 @@ if __name__ == '__main__':
     powThread = Thread(target=mine)
     powThread.setDaemon(True)
     powThread.start()
+
+    saveThread = Thread(target=stateSaver)
+    saveThread.setDaemon(True)
+    saveThread.start()
 
     miner.run(host='0.0.0.0', port=int(myPort))

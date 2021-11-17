@@ -11,7 +11,7 @@ import requests
 import pickle
 
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import genName, print_log
+from DecentSpec.Common.utils import genPickleName, genName, print_log
 
 class MinerDB:
     def __init__(self):
@@ -94,6 +94,7 @@ class Contributor:
 class RewardDB:
     def __init__(self, MinerDB, para, name):
         self.rewardDict = {}
+        self.name = name
         self.fileName = "DecentSpec/Test/reward_{}.txt".format(name)
 
         self.myMember = MinerDB # link with memberlist for scan
@@ -125,7 +126,7 @@ class RewardDB:
             print("longest chain from {}".format(fromwhom))
             if len(longest_chain) > 0:
                 latest_global_weight = longest_chain[-1]['new_global']
-                with open(CONFIG.PICKLE_NAME,"wb") as f:
+                with open(genPickleName(self.name, CONFIG.PICKLE_GLOBAL),"wb") as f:
                     pickle.dump(latest_global_weight, f)
             self.updateReward(longest_chain)
             self.__print()
