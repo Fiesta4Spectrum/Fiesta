@@ -17,7 +17,8 @@ from DecentSpec.Miner.para import Para
 
 '''
 usage:
-    python -m DecentSpec.Miner.miner {1} {2} {3} {4} {opt-5}
+    python -m DecentSpec.Miner.miner {0} {1} {2} {3} {4} {opt-5}
+    {0} - seed node address with port
     {1} - ip or domain with http
     {2} - port 
     {3} - block min locals
@@ -34,11 +35,12 @@ miner = Flask(__name__)
 myPort = None
 myIp = None
 
-if (len(sys.argv) >= 5):
-    myIp = sys.argv[1]
-    myPort = sys.argv[2]
-    BLOCK_MIN_THRESHOLD = int(sys.argv[3])
-    BLOCK_MAX_THRESHOLD = int(sys.argv[4])
+if (len(sys.argv) >= 6):
+    mySeedServer = sys.argv[1]
+    myIp = sys.argv[2]
+    myPort = sys.argv[3]
+    BLOCK_MIN_THRESHOLD = int(sys.argv[4])
+    BLOCK_MAX_THRESHOLD = int(sys.argv[5])
 else:
     print("incorrect parameter")
     exit
@@ -63,8 +65,8 @@ PARTITION_ST_INDEX = 7
 PARTITION_ED_INDEX = 14
 peer_access = 0             # input para {5} of partition map
 
-if len(sys.argv) == 6:      # activate partition if {5} exsits
-    peer_access = int(sys.argv[5][1:])  # ignore the first letter R in the para
+if len(sys.argv) == 7:      # activate partition if {5} exsits
+    peer_access = int(sys.argv[6][1:])  # ignore the first letter R in the para
     if peer_access != 0:
         PARTITION = True
 
@@ -203,6 +205,7 @@ def register():
     global myPara
     global myChain
     global myAddr
+    global mySeedServer
 
     data = {
         'name' : myName,
@@ -210,7 +213,7 @@ def register():
     }
     try:
         resp = requests.post(
-            url = CONFIG.SEED_ADDR + CONFIG.API_REGISTER,
+            url = mySeedServer + CONFIG.API_REGISTER,
             json = data
         )
     except requests.exceptions.ConnectionError:

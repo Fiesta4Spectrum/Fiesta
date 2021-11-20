@@ -120,6 +120,21 @@ class Block:
         if CONFIG.EWMA_SIMPLE:
             return alpha
         return alpha ** abs(gap-1)
+    
+    @staticmethod
+    def gen_global_loss(block):
+        local_list = block.local_list
+        sum_loss = 0.0
+        total_size = 0
+        for local in local_list:
+            if local['type'] == 'localModelWeight':
+                MLdata = local['content']
+                size = MLdata['stat']['size']
+                sum_loss += MLdata['stat']['trainedLoss'] * size
+                total_size += size
+        if total_size == 0:
+            return 0
+        return sum_loss / total_size
 
 class FileLogger:
     def __init__(self, name):
@@ -128,11 +143,11 @@ class FileLogger:
         self.zero = 0
     def print_chain(self, chain):
         with open(self.__chain_path, "w") as f:
-            f.write("#\tP-Hash\tHash\tMiner\tLocal_weights\n")
+            f.write("#\tP-Hash\tHash\tMiner\tLoss\tLocal_weights\n")
             sum_delay = 0.0
             sum_size = 0
             for block in chain:
-                f.write("{}\t{}\t{}\t{}\t{}\n".format(block.index, block.prev_hash[:6], block.hash[:6], block.miner[:6], block.print_list()))
+                f.write("{}\t{}\t{}\t{}\t{:.4f}\t{}\n".format(block.index, block.prev_hash[:6], block.hash[:6], block.miner[:6], Block.gen_global_loss(block), block.print_list()))
                 delay, size = block.delay_stat()
                 sum_delay += delay
                 sum_size += size

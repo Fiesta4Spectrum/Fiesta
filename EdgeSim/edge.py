@@ -12,7 +12,8 @@ from DecentSpec.Common.modelTemplate import FNNModel
 import DecentSpec.Common.config as CONFIG
 '''
 usage:
-    python -m DecentSpec.EdgeSim.edge {1} {2} {3} {4} {opt-5}
+    python -m DecentSpec.EdgeSim.edge {0} {1} {2} {3} {4} {opt-5}
+    {0} - seed node address
     {1} - mode: test or training
     {2} - file path (train or test)
     {3} - size per round / "0" refers to full set
@@ -136,11 +137,12 @@ def get_latest(addr_list):
     
     return data['weight'], data['preprocPara'], data['trainPara'], data['layerStructure']
 
-def push_trained(size, lossDelta, weight, addr_list, index):
+def push_trained(size, lossDelta, loss, weight, addr_list, index):
 
     MLdata = {
         'stat' : {  'size' : size,
-                    'lossDelta' : lossDelta,},
+                    'lossDelta' : lossDelta,
+                    'trainedLoss' : loss},
         'weight' : weight,
         'base_gen' : global_gen,
     }
@@ -213,7 +215,7 @@ def local_training(model, data, para, layerStructure):
         if ep == epoch - 1:
             avg_loss_end = loss_sum/i
 
-    return size, avg_loss_begin - avg_loss_end, save_weights_into_dict(model)
+    return size, avg_loss_begin - avg_loss_end, avg_loss_end, save_weights_into_dict(model)
 
 def local_tester(model, data, para, layerStructure):
     batch = para['batch']
@@ -242,6 +244,7 @@ def train_mode(train_file):
     global global_gen
     global mode
     global forever_flag
+    global seed_addr
 
     localFeeder = DataFeeder(train_file)
     index = 0
@@ -252,7 +255,7 @@ def train_mode(train_file):
         index += 1
 
         # miner communication
-        minerList = fetch_list(CONFIG.SEED_ADDR)
+        minerList = fetch_list(seed_addr)
         modelWeights, preprocPara, trainPara, layerStructure = get_latest(minerList)
         print("performing {}-th {} based on task {} # {}".format(index, mode, task_name, global_gen))
 
@@ -270,10 +273,10 @@ def train_mode(train_file):
         localFeeder.setPreProcess(preprocPara)
 
         # local training
-        size, lossDelta, weight = local_training(myModel, localFeeder.fetch(fetch_size_per), trainPara, layerStructure)
+        size, lossDelta, loss, weight = local_training(myModel, localFeeder.fetch(fetch_size_per), trainPara, layerStructure)
 
         # send back to server
-        push_trained(size, lossDelta, weight, minerList, index)
+        push_trained(size, lossDelta, loss, weight, minerList, index)
     # end of the life cycle =====================================
 
     print("local dataset training done!")
@@ -293,6 +296,7 @@ def tsundere_is_moe(addr_list):
 def test_mode(test_file):
     global fetch_size_per
     global rounds
+    global seed_addr
 
     index = 0
     localFeeder = DataFeeder(test_file)
@@ -301,7 +305,7 @@ def test_mode(test_file):
             rounds -= 1
         index += 1
         # miner communication
-        minerList = fetch_list(CONFIG.SEED_ADDR)
+        minerList = fetch_list(seed_addr)
         modelWeights, preprocPara, trainPara, layerStructure = get_latest(minerList)
         print("performing {}-th {} based on task {} # {}".format(index, mode, task_name, global_gen))
 
@@ -339,17 +343,18 @@ tsundere = 1    # TsuNDeRe 蹭的累
                 # perform next training 
                 # only after the global grow up "tsundere"'s gen more!
 
-if len(sys.argv) >= 5:
-    mode = sys.argv[1]
-    file_path = sys.argv[2]
-    fetch_size_per = int(sys.argv[3])
-    rounds = int(sys.argv[4])
+if len(sys.argv) >= 6:
+    seed_addr = sys.argv[1]
+    mode = sys.argv[2]
+    file_path = sys.argv[3]
+    fetch_size_per = int(sys.argv[4])
+    rounds = int(sys.argv[5])
     forever_flag = rounds == 0
-    if len(sys.argv) == 6:
-        if sys.argv[5].startswith("R"):
-            miner_access = int(sys.argv[5][1:])
-        elif sys.argv[5].startswith("T"):
-            tsundere = int(sys.argv[5][1:])
+    if len(sys.argv) == 7:
+        if sys.argv[6].startswith("R"):
+            miner_access = int(sys.argv[6][1:])
+        elif sys.argv[6].startswith("T"):
+            tsundere = int(sys.argv[6][1:])
         
 else:
     print("unrecognized command")
