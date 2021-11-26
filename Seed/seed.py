@@ -82,6 +82,18 @@ rewardRecord = RewardDB(myMembers, myPara, myName)
 
 # register related api ===================================
 
+@seed.route(CONFIG.API_GET_REWARD, methods=['GET'])
+def get_reward():
+    global rewardRecord
+    id = request.args.get('id', default="null", type=str)
+    category, uploads, reward = rewardRecord.query(id)
+    ret = { "id" : id,
+            "role" : category,
+            "uploads" : uploads,
+            "reward" : reward
+            }
+    return json.dumps(ret)
+
 @seed.route(CONFIG.API_GET_MINER, methods=['GET'])
 def get_peers():
     global myMembers
@@ -126,7 +138,7 @@ def migrateFromDump():
     return ret
 
 # ask this new seed to reseed the network
-@seed.route(CONFIG.API_TV_to_MULTITV, methods=['GET'])
+@seed.route(CONFIG.API_TV_TO_MULTITV, methods=['GET'])
 def flush():   
     global myMembers
     global mySeedModel

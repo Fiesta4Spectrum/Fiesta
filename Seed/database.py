@@ -169,6 +169,12 @@ class RewardDB:
                         self.rewardDict[key] = Contributor(key, 'edge')
                     self.rewardDict[key].submit(tx['content']['stat']['size'],
                                                 tx['content']['stat']['lossDelta'])
+    
+    def query(self, id):
+        if not id in self.rewardDict:
+            return "stranger", 0, 0
+        contri = self.rewardDict[id]
+        return contri.role, contri.mined_block + contri.shared_weight, contri.reward
 
     def __runscan(self):
         scan_thread = Thread(target=self.scan)

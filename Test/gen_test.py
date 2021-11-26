@@ -15,7 +15,7 @@ useage:
     {1} - int, num of miner
     {2} - int, num of edge device
     {3} - float, percentage of test set 
-    {4} - int, num of fl round
+    {4} - int, num of fl round; 0 refers to forever
     {5} - int, block min threshold
     {6} - int, block max threshold
     {7} - subdata set distribution: 
@@ -43,15 +43,15 @@ def genShell(tag):
     shell_file.write("xterm -T seednode -e python3 -m DecentSpec.Seed.seed {} 5000 &\n".format(task))
     shell_file.write("sleep 1\n")
     for i in range(0, miner_num):
-        shell_file.write("xterm -T miner{} -e python3 -m DecentSpec.Miner.miner {} {} {} {} &\n".format(i, MY_IP, 8000+i, block_size_min, block_size_max))
+        shell_file.write("xterm -T miner{} -e python3 -m DecentSpec.Miner.miner {} {} {} {} {} &\n".format(i, CONFIG.SEED_ADDR, MY_IP, 8000+i, block_size_min, block_size_max))
     shell_file.write("sleep 1\n")
 
     for i in range(0, edge_num):
         train_file_path = "DecentSpec/Test/{}/train_{}.dat".format(dataset_path, i)
-        shell_file.write("xterm -T edge{} -e python3 -m DecentSpec.EdgeSim.edge train {} {} {} &\n".format(i, train_file_path, 0, round))         #  size zero refers to full set
+        shell_file.write("xterm -T edge{} -e python3 -m DecentSpec.EdgeSim.edge train {} {} {} {} &\n".format(CONFIG.SEED_ADDR, i, train_file_path, 0, round))         #  size zero refers to full set
 
     test_file_path = "DecentSpec/Test/{}/test.dat".format(dataset_path)
-    shell_file.write("xterm -T loss_tester -e python3 -m DecentSpec.EdgeSim.edge test {} {} {} &\n".format(test_file_path, 0, 0))            #  size zero refers to full set
+    shell_file.write("xterm -T loss_tester -e python3 -m DecentSpec.EdgeSim.edge test {} {} {} {} &\n".format(CONFIG.SEED_ADDR, test_file_path, 0, 0))            #  size zero refers to full set
     shell_file.write("cd DecentSpec/Test\n")
     shell_file.close()
     print("- done, plz run 'source run_test_{}.sh' ".format(test_id))

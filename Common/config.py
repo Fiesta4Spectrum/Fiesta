@@ -51,4 +51,5 @@ API_UPDATE_SEED = '/seed_update'
 
 API_GET_MINER = '/miner_peers'
 API_REGISTER = '/register'
-API_TV_to_MULTITV = '/reseed_to_mtv'
+API_TV_TO_MULTITV = '/reseed_to_mtv'
+API_GET_REWARD = '/reward'

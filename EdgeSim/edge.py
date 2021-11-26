@@ -67,6 +67,7 @@ class DataFeeder:                   # emulate each round dataset feeder
         st_list = []
         for i, line in enumerate(partialList):
             st_line = []
+            # print("sizeof avg {}, sizeof dev {}, sizeof single line {}".format(len(self.st_avg), len(self.st_dev), len(line)))
             for j, item in enumerate(line):
                 st_line.append( (item - self.st_avg[j])/self.st_dev[j] )
             st_list.append(st_line)
@@ -268,8 +269,10 @@ def train_mode(train_file):
         load_weights_from_dict(myModel, modelWeights)
 
         # data preprocessing setup
-        if layerStructure[-1] > 1:
-            localFeeder = DataFeeder(train_file, layerStructure[-1] - 1)
+        if (layerStructure[-1] == 8):       # tv to multi tv will change the output layer from 1 to 8
+            localFeeder = DataFeeder(train_file, tail_dup = layerStructure[-1] - 1)
+        else:
+            localFeeder = DataFeeder(train_file)
         localFeeder.setPreProcess(preprocPara)
 
         # local training
