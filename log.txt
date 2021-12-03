@@ -1,9 +1,0 @@
-Development Log
-
-TODO:
-[Seed] use a real database instead of in-Memory object.
-[Seed] add new api to query the reward of a specific device.
-[Dataset] use kaggle to download built-in dataset instead git
-[Pool] keep a buffer of (recorded) locals' hash, and reject a new block 
-        if all its included locals already shows up in the buffer.
-        It is important especially when pool between miners diverge severly
