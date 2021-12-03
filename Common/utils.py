@@ -14,21 +14,23 @@ class Intrpt:
         self.flag = False
         self.lock = Lock()
         self.desc = desc
-    def check(self):
-        with self.lock:
-            ret = self.flag
-        return ret
-    def rst(self):
-        with self.lock:
-            self.flag = False
+        self.remark = None
+    # def check(self):
+    #     with self.lock:
+    #         ret = self.flag
+    #     return ret
+    # def rst(self):
+    #     with self.lock:
+    #         self.flag = False
     def check_and_rst(self):
         with self.lock:
             ret = self.flag
             self.flag = False
         return ret
-    def set(self):
+    def set(self, remark = None):
         with self.lock:
             self.flag = True
+            self.remark = remark
 
 def print_log(tag, content):
     print("[{}] {}".format(tag, content))

@@ -139,7 +139,8 @@ def get_latest(addr_list):
     return data['weight'], data['preprocPara'], data['trainPara'], data['layerStructure']
 
 def push_trained(size, lossDelta, loss, weight, addr_list, index):
-
+    if lossDelta < 0:
+        return
     MLdata = {
         'stat' : {  'size' : size,
                     'lossDelta' : lossDelta,

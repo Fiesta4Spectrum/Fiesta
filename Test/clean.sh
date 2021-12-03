@@ -1,4 +1,4 @@
 rm -rf *.txt
 cd ../..
-rm *.pickle
-cd DecentSpec/Test/
+rm -rf decentspec_log/
+rm -rf decentspec_pickle/

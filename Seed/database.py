@@ -95,7 +95,7 @@ class RewardDB:
     def __init__(self, MinerDB, para, name):
         self.rewardDict = {}
         self.name = name
-        self.fileName = "DecentSpec/Test/reward_{}.txt".format(name)
+        self.fileName = CONFIG.LOG_DIR + "reward_{}.txt".format(name)
 
         self.myMember = MinerDB # link with memberlist for scan
         self.para = para        # link with para
@@ -126,7 +126,7 @@ class RewardDB:
             print("longest chain from {}".format(fromwhom))
             if len(longest_chain) > 0:
                 latest_global_weight = longest_chain[-1]['new_global']
-                with open(genPickleName(self.name, CONFIG.PICKLE_GLOBAL),"wb") as f:
+                with open(CONFIG.PICKLE_DIR + genPickleName(self.name, CONFIG.PICKLE_GLOBAL),"wb") as f:
                     pickle.dump(latest_global_weight, f)
             self.updateReward(longest_chain)
             self.__print()

@@ -1,4 +1,5 @@
 import pickle
+import os
 import sys
 from threading import Thread
 import requests
@@ -34,6 +35,7 @@ usage:
 miner = Flask(__name__)
 myPort = None
 myIp = None
+reg_flag = False
 
 if (len(sys.argv) >= 6):
     mySeedServer = sys.argv[1]
@@ -101,7 +103,7 @@ def reseed():
     if not valid_seed(seed):
         print_log("reseed", "invalid seed")
         return "invalid", 400
-    powIntr.set()
+    powIntr.set("Reseed!")
     myPool.flush()
     myChain.flush()
     myPara = extract_para_from_dict(seed)
@@ -193,7 +195,7 @@ def new_block():
             consensus()
         return "rejected", 400
     # if this new comer is accepted
-    powIntr.set()                                       # hangup pow
+    powIntr.set("Outcome Block!")                                       # hangup pow
     print_log("new_block", "new outcoming block #{} accepted".format(new_block.index))
     myPool.remove(new_block.local_list)                  # remove the used local in the new block
     return "added", 200
@@ -206,6 +208,7 @@ def register():
     global myChain
     global myAddr
     global mySeedServer
+    global reg_flag
 
     data = {
         'name' : myName,
@@ -227,6 +230,7 @@ def register():
         if myPara == None or myPara.seed_name != resp.json()['seed_name']:
             myPara = extract_para_from_dict(resp.json())
             myChain.create_genesis_block(myPara)
+        reg_flag = True
     else:
         # TODO when http get fails
         print_log("register", "seed server not available")
@@ -244,14 +248,21 @@ def stateSaver():
     global myName
     global myChain
     global myPara
+    os.makedirs(CONFIG.PICKLE_DIR, exist_ok=True)
     while True:
         time.sleep(CONFIG.PICKLE_INTERVAL)
         dump_dict = {
-            'name' : myName,
+            'local' : { 'name' : myName,
+                        'seed_server' : mySeedServer, 
+                        'ip' : myIp, 
+                        'port' : myPort,
+                        'block_min' : BLOCK_MIN_THRESHOLD,
+                        'block_max' : BLOCK_MAX_THRESHOLD
+                        },
             'chain' : myChain,
             'para' : myPara,
         }
-        with open(genPickleName(myName, CONFIG.PICKLE_MINER), "wb") as f:
+        with open(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_MINER), "wb") as f:
             pickle.dump(dump_dict, f)
 
 # pow thread setup =================================
@@ -295,9 +306,7 @@ def gen_candidate_block(local_list):
     global myPara
     global myName
     
-    if powIntr.check_and_rst():
-        print_log('pow', 'not allowed!')
-        return None
+    powIntr.check_and_rst()
     
     local_list = local_list[:BLOCK_MAX_THRESHOLD].copy()
 
@@ -317,7 +326,7 @@ def gen_candidate_block(local_list):
         new_block.nonce += 1
         cur_hash = new_block.compute_hash()
         if powIntr.check_and_rst():
-            print_log('pow', 'interrupted!')
+            print_log('pow', 'interrupted! due to'.format(powIntr.remark))
             return None
     new_block.hash = cur_hash
 
@@ -327,28 +336,33 @@ def consensus():
     global myChain
     global powIntr
 
-    i_am = True
+    i_am_the_longest = True
+    new_longest = None
     max_len = myChain.size
 
     for peer in accessible_miners():
         try:
             resp = requests.get(peer + CONFIG.API_GET_CHAIN_SIMPLE).json()  # get the short version
             if resp['length'] > max_len:
-                resp = requests.get(peer + CONFIG.API_GET_CHAIN).json()     # get the full version
-                new_chain = list(map(
-                    lambda x: extract_block_from_dict(x), 
-                    resp['chain']
-                    ))
-                if valid_chain(new_chain):
-                    powIntr.set()
-                    myChain.replace(new_chain)
-                    print_log("consensus", "get a longer chain from else where")
-                    myPool.flush()                                          # flush my pool
-                    i_am = False
-                    max_len = resp['length']
+                resp = requests.get(peer + CONFIG.API_GET_CHAIN).json()     # get the full version to validate
+                new_chain = list(map(extract_block_from_dict, resp['chain']))
+                if valid_chain(new_chain) and len(new_chain) > max_len:
+                    powIntr.set("Longer chain!")
+                    i_am_the_longest = False
+                    new_longest = new_chain
+                    max_len = len(new_chain)
+
         except requests.exceptions.ConnectionError:
             print_log("requests", "fails to connect to " + peer)
-    return i_am
+
+    if i_am_the_longest:
+         return True
+
+    # replacement happens
+    myChain.replace(new_longest)
+    print_log("consensus", "get a longer chain from else where")
+    myPool.flush()                                          # flush my pool
+    return False
 
 def announce_new_block(new_block):
     AsyncPost(accessible_miners(), new_block.get_block_dict(shrank=False), CONFIG.API_POST_BLOCK).start()
@@ -445,4 +459,7 @@ if __name__ == '__main__':
     saveThread.setDaemon(True)
     saveThread.start()
 
+    while (not reg_flag):
+        pass
+    print("Miner Server Registered!")
     miner.run(host='0.0.0.0', port=int(myPort))

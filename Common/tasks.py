@@ -3,7 +3,7 @@
 class TV_CHANNEL_TASK:
     NAME = "tv_regression"
     DIFFICULTY = 3
-    ALPHA = 1
+    ALPHA = 0.5
     DEFAULT_NN_STRUCTURE = [2,50,50,50,1]
     SAMPLE_PARA = {
         'center_freq' : 525000000,
@@ -17,7 +17,7 @@ class TV_CHANNEL_TASK:
         'batch' : 10,
         'lr'    : 0.001,
         'opt'   : 'Adam',
-        'epoch' : 10,                            # local epoch Num
+        'epoch' : 5,                            # local epoch Num
         'loss'  : 'MSE',
     }
     FULL_FILE_PATH = "../Dataset/GPS_power.dat"
@@ -61,7 +61,7 @@ class MULTI_TV_CHANNEL_TASK:
 class ANOMALY_DETECTION_TASK:
     NAME = "lte_anomaly_detection"
     DIFFICULTY = 3
-    ALPHA = 1
+    ALPHA = 0.5
     DEFAULT_NN_STRUCTURE = [256,64,16,64,256]
     SAMPLE_PARA = {
         'center_freq' : 725000000,

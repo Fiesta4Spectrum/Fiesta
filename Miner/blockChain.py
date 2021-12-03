@@ -1,4 +1,5 @@
-from threading import Lock
+from threading import Lock, local
+import os
 from copy import deepcopy
 from DecentSpec.Common.utils import curTime, dict2tensor, difficultyCheck, hashValue, genTimestamp, tensor2dict, print_log
 import DecentSpec.Common.config as CONFIG
@@ -37,6 +38,8 @@ class Block:
             shrank_block.pop('hash')
         if shrank:
             shrank_block.pop('local_list')
+            shrank_block.pop('new_global')
+            shrank_block.pop('base_global')
         else:
             # when we need to keep the local list information
             local_list_shrank = deepcopy(self.local_list)
@@ -75,7 +78,11 @@ class Block:
             base_gen = local_dict['content']['base_gen']
         else:
             base_gen = "?"
-        return "{}-{}".format(base_gen, local_dict['author'][:3])
+        if 'upload_index' in local_dict:
+            index = local_dict['upload_index']
+        else:
+            index = "?"
+        return "{}-{}-{}".format(base_gen, local_dict['author'][:3], index)
 
     @staticmethod
     def size_in_char(block):
@@ -138,8 +145,9 @@ class Block:
 
 class FileLogger:
     def __init__(self, name):
-        self.__log_path = "DecentSpec/Test/log_{}.txt".format(name)
-        self.__chain_path = "DecentSpec/Test/chain_{}.txt".format(name)
+        os.makedirs(CONFIG.LOG_DIR, exist_ok=True)
+        self.__log_path = CONFIG.LOG_DIR + "miner_{}.txt".format(name)
+        self.__chain_path = CONFIG.LOG_DIR + "chain_{}.txt".format(name)
         self.zero = 0
     def print_chain(self, chain):
         with open(self.__chain_path, "w") as f:

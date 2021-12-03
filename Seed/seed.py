@@ -1,4 +1,5 @@
 import sys
+import os
 import json
 import requests
 import time
@@ -23,6 +24,9 @@ usage:
             "anom"  : anomaly detection
     {2} - int, port number
 '''
+
+os.makedirs(CONFIG.PICKLE_DIR, exist_ok=True)
+os.makedirs(CONFIG.LOG_DIR, exist_ok=True)
 
 seed = Flask(__name__)
 SEED = None
@@ -67,15 +71,18 @@ def stateSaver():
     global myName
     global mySeedModel
     global myPara
+
     while True:
         time.sleep(CONFIG.PICKLE_INTERVAL)
         dump_dict = {
+            'local' : { 'name' : myName,
+                        'task' : task_type, 
+                        'port' : myPort},
             'seed_name' : mySeedName,
-            'name' : myName,
             'seed_model' : mySeedModel,
             'para' : myPara,
         }
-        with open(genPickleName(myName, CONFIG.PICKLE_SEED), "wb") as f:
+        with open(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_SEED), "wb") as f:
             pickle.dump(dump_dict, f)
 
 rewardRecord = RewardDB(myMembers, myPara, myName)
@@ -119,11 +126,14 @@ def reg_miner():
     # print(ret["para"])
     return json.dumps(ret)
 
-def migrateFromDump():
+def migrate_from_dump():
     global layerStructure
+    global myName
+
     # TODO use the previous dumped global model
     ret = FNNModel(layerStructure)
-    with open(CONFIG.PICKLE_GLOBAL, "rb") as f:
+    
+    with open(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_GLOBAL), "rb") as f:
         expended_weight = pickle.load(f)
     # print("[migration] before:")
     # print(expended_weight)
@@ -159,7 +169,7 @@ def flush():
         'difficulty' : SEED.DIFFICULTY,
     }
 
-    mySeedModel = migrateFromDump()
+    mySeedModel = migrate_from_dump()
     genSeedName() # change the seed name
     post_object = {
         'name' : mySeedName,

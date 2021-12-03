@@ -1,5 +1,6 @@
 # FILE LOG ENABLE
-LOG_POOL = True
+LOG_DIR = "decentspec_log/"
+LOG_POOL = False
 LOG_MINER = True
 LOG_CHAIN = True
 LOG_REWARD = True
@@ -8,6 +9,7 @@ LOG_REWARD = True
 PICKLE_INTERVAL = 10    # reserve the miner state per 10s. 
                         # seed has no state, so only reserve once
                         # but the latest global will be pickled in database.py
+PICKLE_DIR = "decentspec_pickle/"
 PICKLE_GLOBAL = "global"
 PICKLE_MINER = "miner"
 PICKLE_SEED = "seed"
