@@ -39,7 +39,8 @@ SEED = None
         #     'seed_model' : mySeedModel,
         #     'para' : myPara,
         # }
-
+        
+RECOVERY_FLAG = False
 if (len(sys.argv) == 2):
     # state recover
     RECOVERY_FLAG = True

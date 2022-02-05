@@ -139,12 +139,12 @@ class RewardDB:
             print(self.rewardDict[node].showContribution())
         print("============== =============== ===============")
         if CONFIG.LOG_REWARD:
-            f = open(self.fileName, "w+")
-            f.write("============== Reward Database ===============\n")
-            f.write("key     \trole \tmined\tupdate\treward\n")
-            for node in self.rewardDict:
-                f.write(self.rewardDict[node].showContribution() + "\n")
-            f.write("============== =============== ===============\n")
+            with open(self.fileName, "w+") as f:
+                f.write("============== Reward Database ===============\n")
+                f.write("key     \trole \tmined\tupdate\treward\n")
+                for node in self.rewardDict:
+                    f.write(self.rewardDict[node].showContribution() + "\n")
+                f.write("============== =============== ===============\n")
     
     def updateReward(self, dictChain):
         self.__flush()  # calculate reward from the very first block

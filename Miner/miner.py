@@ -48,26 +48,32 @@ reg_flag = False
         #     'chain' : myChain,
         #     'para' : myPara,
         # }
-
+RECOVERY_FLAG = False
 if (len(sys.argv) == 2):
     RECOVERY_FLAG = True
     # state recovery
     with open(sys.argv[1],"rb") as f:
         last_state = pickle.load(f)
-    mySeedServer = last_state['local']['mySeedServer']
+    mySeedServer = last_state['local']['seed_server']
     myIp = last_state['local']['ip']
     myPort = last_state['local']['port']
     BLOCK_MAX_THRESHOLD = last_state['local']['block_max']
-    BLOCK_MAX_THRESHOLD = last_state['local']['block_min']
+    BLOCK_MIN_THRESHOLD = last_state['local']['block_min']
     myName = last_state['local']['name']
-
-if (len(sys.argv) >= 6):
+elif (len(sys.argv) == 6):
     mySeedServer = sys.argv[1]
     myIp = sys.argv[2]
     myPort = sys.argv[3]
     BLOCK_MIN_THRESHOLD = int(sys.argv[4])
     BLOCK_MAX_THRESHOLD = int(sys.argv[5])
     myName = genName()
+elif (len(sys.argv) == 7):
+    mySeedServer = sys.argv[1]
+    myIp = sys.argv[2]
+    myPort = sys.argv[3]
+    BLOCK_MIN_THRESHOLD = int(sys.argv[4])
+    BLOCK_MAX_THRESHOLD = int(sys.argv[5])
+    myName = sys.argv[6]
 else:
     print("incorrect parameter")
     exit
@@ -77,11 +83,10 @@ print("***** NODE init, I am miner {} *****".format(myName))
 
 myLogger = FileLogger(myName)
 myLogger.calibrate()
+myChain = BlockChain(myLogger)
 if RECOVERY_FLAG:
-    myChain = last_state['chain']
-    myChain.logger = myLogger
-else:
-    myChain = BlockChain(myLogger)
+    myChain.chain = last_state['chain'].chain
+
 myPool = Pool(myLogger)
 powIntr = Intrpt('pow interrupt')
 
@@ -93,33 +98,36 @@ else:
                     # not directly referenceds only used for duplication
 
 # PARTITION EXP FIELD =================================== /// ===============================
-PARTITION = False
-PARTITION_ST_INDEX = 7
-PARTITION_ED_INDEX = 14
-peer_access = 0             # input para {5} of partition map
+# PARTITION = False
+# PARTITION_ST_INDEX = 7
+# PARTITION_ED_INDEX = 14
+# peer_access = 0             # input para {5} of partition map
 
-if len(sys.argv) == 7:      # activate partition if {5} exsits
-    peer_access = int(sys.argv[6][1:])  # ignore the first letter R in the para
-    if peer_access != 0:
-        PARTITION = True
+# if len(sys.argv) == 7:      # activate partition if {5} exsits
+#     peer_access = int(sys.argv[6][1:])  # ignore the first letter R in the para
+#     if peer_access != 0:
+#         PARTITION = True
+
+# def accessible_miners():
+#     global myPeers
+#     global myChain
+#     global PARTITION
+
+#     if not PARTITION:
+#         return myPeers
+#     if myChain.size > PARTITION_ST_INDEX and \
+#        myChain.size <= PARTITION_ED_INDEX:
+#         if peer_access > 0:
+#             return myPeers[:peer_access]
+#         elif peer_access < 0:
+#             return myPeers[peer_access:]
+#     return myPeers
+    
+# ====================================================== /// ================================
 
 def accessible_miners():
     global myPeers
-    global myChain
-    global PARTITION
-
-    if not PARTITION:
-        return myPeers
-    if myChain.size > PARTITION_ST_INDEX and \
-       myChain.size <= PARTITION_ED_INDEX:
-        if peer_access > 0:
-            return myPeers[:peer_access]
-        elif peer_access < 0:
-            return myPeers[peer_access:]
     return myPeers
-    
-
-# ====================================================== /// ================================
 
 # flask api setup ========================================
 
