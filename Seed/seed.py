@@ -30,23 +30,42 @@ os.makedirs(CONFIG.LOG_DIR, exist_ok=True)
 
 seed = Flask(__name__)
 SEED = None
+
+        # dump_dict = {
+        #     'local' : { 'name' : myName,
+        #                 'task' : task_type, 
+        #                 'port' : myPort},
+        #     'seed_name' : mySeedName,
+        #     'seed_model' : mySeedModel,
+        #     'para' : myPara,
+        # }
+
+if (len(sys.argv) == 2):
+    # state recover
+    RECOVERY_FLAG = True
+    with open(sys.argv[1],"r") as f:
+        last_state = pickle.load(f)
+    task_type = last_state['local']['task']
+    myName = last_state['local']['name']
+    myPort = last_state['local']['port']
+
 if (len(sys.argv) == 3):
     task_type = sys.argv[1]
     # dynamic import Task seed
-    if task_type == "tv":   
-        SEED = getattr(import_module("DecentSpec.Common.tasks"), "TV_CHANNEL_TASK")
-    elif task_type == "anom":
-        SEED = getattr(import_module("DecentSpec.Common.tasks"), "ANOMALY_DETECTION_TASK")
-    else:
-        print("unrecognized task")
-        exit()
     myPort = sys.argv[2]
+    myName = genName()  # name of this seed server
 else:
     print("wrong argument, check usage")
     exit()
 
+if task_type == "tv":   
+    SEED = getattr(import_module("DecentSpec.Common.tasks"), "TV_CHANNEL_TASK")
+elif task_type == "anom":
+    SEED = getattr(import_module("DecentSpec.Common.tasks"), "ANOMALY_DETECTION_TASK")
+else:
+    print("unrecognized task")
+    exit()
 
-myName = genName()  # name of this seed server
 print("***** NODE init, I am seed {} *****".format(myName))
 myMembers = MinerDB()
 
@@ -54,17 +73,22 @@ layerStructure = SEED.DEFAULT_NN_STRUCTURE
 def genSeedName():
     global mySeedName
     mySeedName = SEED.NAME + "_" + genName(3)
-genSeedName()
-mySeedModel = FNNModel(layerStructure)
 
-myPara = {
-    'alpha' : SEED.ALPHA,
-    'preprocPara' : SEED.PREPROC_PARA,
-    'trainPara' : SEED.TRAIN_PARA,
-    'samplePara' : SEED.SAMPLE_PARA,
-    'layerStructure' : layerStructure,
-    'difficulty' : SEED.DIFFICULTY,
-} 
+if (not RECOVERY_FLAG):
+    genSeedName()
+    mySeedModel = FNNModel(layerStructure)
+    myPara = {
+        'alpha' : SEED.ALPHA,
+        'preprocPara' : SEED.PREPROC_PARA,
+        'trainPara' : SEED.TRAIN_PARA,
+        'samplePara' : SEED.SAMPLE_PARA,
+        'layerStructure' : layerStructure,
+        'difficulty' : SEED.DIFFICULTY,
+    } 
+else:
+    mySeedName = last_state['seed_name']
+    mySeedModel = last_state['seed_model']
+    myPara = last_state['para']
 
 def stateSaver():
     global mySeedName

@@ -37,28 +37,59 @@ myPort = None
 myIp = None
 reg_flag = False
 
+        # dump_dict = {
+        #     'local' : { 'name' : myName,
+        #                 'seed_server' : mySeedServer, 
+        #                 'ip' : myIp, 
+        #                 'port' : myPort,
+        #                 'block_min' : BLOCK_MIN_THRESHOLD,
+        #                 'block_max' : BLOCK_MAX_THRESHOLD
+        #                 },
+        #     'chain' : myChain,
+        #     'para' : myPara,
+        # }
+
+if (len(sys.argv) == 2):
+    RECOVERY_FLAG = True
+    # state recovery
+    with open(sys.argv[1],"r") as f:
+        last_state = pickle.load(f)
+    mySeedServer = last_state['local']['mySeedServer']
+    myIp = last_state['local']['ip']
+    myPort = last_state['local']['port']
+    BLOCK_MAX_THRESHOLD = last_state['local']['block_max']
+    BLOCK_MAX_THRESHOLD = last_state['local']['block_min']
+    myName = last_state['local']['name']
+
 if (len(sys.argv) >= 6):
     mySeedServer = sys.argv[1]
     myIp = sys.argv[2]
     myPort = sys.argv[3]
     BLOCK_MIN_THRESHOLD = int(sys.argv[4])
     BLOCK_MAX_THRESHOLD = int(sys.argv[5])
+    myName = genName()
 else:
     print("incorrect parameter")
     exit
 
 myAddr = myIp + ":" + myPort
-myName = genName()
 print("***** NODE init, I am miner {} *****".format(myName))
 
 myLogger = FileLogger(myName)
 myLogger.calibrate()
-myChain = BlockChain(myLogger)
+if RECOVERY_FLAG:
+    myChain = last_state['chain']
+    myChain.logger = myLogger
+else:
+    myChain = BlockChain(myLogger)
 myPool = Pool(myLogger)
 powIntr = Intrpt('pow interrupt')
 
 myPeers = None      # peer miner list
-myPara = None       # mother copy of parameters
+if RECOVERY_FLAG:
+    myPara = last_state['para']
+else:
+    myPara = None       # mother copy of parameters
                     # not directly referenceds only used for duplication
 
 # PARTITION EXP FIELD =================================== /// ===============================
