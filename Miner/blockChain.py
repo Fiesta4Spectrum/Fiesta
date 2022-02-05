@@ -163,10 +163,10 @@ class FileLogger:
                 f.write("\nAvg gap between Base-block and Includer-block is {:.2f}\n".format(sum_delay / sum_size))
     def log(self, tag, content):
         with open(self.__log_path, "a+") as f:
-            f.write("{:.5f} [{}] \n{}\n\n".format(genTimestamp() - self.zero, tag, content))
+            f.write("{:.5f} [{}] \n{}\n\n".format(curTime(), tag, content))
     def calibrate(self):
         with open(self.__log_path, "a+") as f:
-            f.write("start from: {}\n\n".format(curTime()))
+            f.write("start from: {}\n".format(curTime()))
         self.zero = genTimestamp()
 
 class BlockChain:
