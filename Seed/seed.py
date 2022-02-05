@@ -43,13 +43,12 @@ SEED = None
 if (len(sys.argv) == 2):
     # state recover
     RECOVERY_FLAG = True
-    with open(sys.argv[1],"r") as f:
+    with open(sys.argv[1],"rb") as f:
         last_state = pickle.load(f)
     task_type = last_state['local']['task']
     myName = last_state['local']['name']
     myPort = last_state['local']['port']
-
-if (len(sys.argv) == 3):
+elif (len(sys.argv) == 3):
     task_type = sys.argv[1]
     # dynamic import Task seed
     myPort = sys.argv[2]

@@ -52,7 +52,7 @@ reg_flag = False
 if (len(sys.argv) == 2):
     RECOVERY_FLAG = True
     # state recovery
-    with open(sys.argv[1],"r") as f:
+    with open(sys.argv[1],"rb") as f:
         last_state = pickle.load(f)
     mySeedServer = last_state['local']['mySeedServer']
     myIp = last_state['local']['ip']

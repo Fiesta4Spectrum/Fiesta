@@ -45,7 +45,7 @@ class MULTI_TV_CHANNEL_TASK:
     FULL_FILE_PATH = "../Dataset/GPS_power.dat" 
 
 class ANOMALY_DETECTION_TASK:
-    NAME = "lte_anomaly_detection"
+    NAME = "lte_detection"
     DIFFICULTY = 3
     ALPHA = 0.5
     DEFAULT_NN_STRUCTURE = [256,64,16,64,256]

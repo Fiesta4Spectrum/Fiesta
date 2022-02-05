@@ -1,6 +1,6 @@
 # FILE LOG ENABLE
 LOG_DIR = "decentspec_log/"
-LOG_POOL = False
+LOG_POOL = True
 LOG_MINER = True
 LOG_CHAIN = True
 LOG_REWARD = True
@@ -16,7 +16,7 @@ PICKLE_SEED = "seed"
 
 # COMMON 
 DEFAULT_NAME_LENGTH = 10
-SEED_ADDR = "http://api.decentspec.org:5000"
+SEED_ADDR = "http://api.decentspec.org:8000"
 POW_ENABLE = True # false will disable the difficulty check which we do not care hash anymore
 REPRODUCIBILITY = True
 

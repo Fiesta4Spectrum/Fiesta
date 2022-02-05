@@ -150,7 +150,7 @@ class FileLogger:
         self.__chain_path = CONFIG.LOG_DIR + "chain_{}.txt".format(name)
         self.zero = 0
     def print_chain(self, chain):
-        with open(self.__chain_path, "w") as f:
+        with open(self.__chain_path, "w+") as f:
             f.write("#\tP-Hash\tHash\tMiner\tLoss\tLocal_weights\n")
             sum_delay = 0.0
             sum_size = 0
@@ -163,7 +163,7 @@ class FileLogger:
                 f.write("\nAvg gap between Base-block and Includer-block is {:.2f}\n".format(sum_delay / sum_size))
     def log(self, tag, content):
         with open(self.__log_path, "a+") as f:
-            f.write("{:.5f} [{}] \n{}\n\n".format(curTime(), tag, content))
+            f.write("{} [{}] \n{}\n\n".format(curTime(), tag, content))
     def calibrate(self):
         with open(self.__log_path, "a+") as f:
             f.write("start from: {}\n".format(curTime()))

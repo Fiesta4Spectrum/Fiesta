@@ -139,7 +139,7 @@ class RewardDB:
             print(self.rewardDict[node].showContribution())
         print("============== =============== ===============")
         if CONFIG.LOG_REWARD:
-            f = open(self.fileName, "w")
+            f = open(self.fileName, "w+")
             f.write("============== Reward Database ===============\n")
             f.write("key     \trole \tmined\tupdate\treward\n")
             for node in self.rewardDict:
