@@ -8,7 +8,7 @@ import time
 from flask import Flask, request
 
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import difficultyCheck, genName, genPickleName, genTimestamp, hashValue, print_log, Intrpt
+from DecentSpec.Common.utils import difficultyCheck, genName, genPickleName, genTimestamp, hashValue, print_log, Intrpt, safe_dump
 from DecentSpec.Miner.asyncPost import AsyncPost
 from DecentSpec.Miner.blockChain import Block, BlockChain, FileLogger
 from DecentSpec.Miner.pool import Pool
@@ -288,6 +288,7 @@ def stateSaver():
     global myChain
     global myPara
     os.makedirs(CONFIG.PICKLE_DIR, exist_ok=True)
+
     while True:
         time.sleep(CONFIG.PICKLE_INTERVAL)
         dump_dict = {
@@ -301,8 +302,7 @@ def stateSaver():
             'chain' : myChain,
             'para' : myPara,
         }
-        with open(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_MINER), "wb") as f:
-            pickle.dump(dump_dict, f)
+        safe_dump(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_MINER), dump_dict)
 
 # pow thread setup =================================
 

@@ -10,7 +10,7 @@ from importlib import import_module
 
 from DecentSpec.Seed.database import MinerDB, RewardDB
 from DecentSpec.Common.modelTemplate import FNNModel 
-from DecentSpec.Common.utils import genPickleName, load_weights_from_dict, print_log, save_weights_into_dict, genName, tensor2dict
+from DecentSpec.Common.utils import genPickleName, load_weights_from_dict, print_log, safe_dump, save_weights_into_dict, genName, tensor2dict
 import DecentSpec.Common.config as CONFIG
 
 # from DecentSpec.Common.tasks import TV_CHANNEL_TASK as SEED
@@ -24,9 +24,6 @@ usage:
             "anom"  : anomaly detection
     {2} - int, port number
 '''
-
-os.makedirs(CONFIG.PICKLE_DIR, exist_ok=True)
-os.makedirs(CONFIG.LOG_DIR, exist_ok=True)
 
 seed = Flask(__name__)
 SEED = None
@@ -95,19 +92,17 @@ def stateSaver():
     global myName
     global mySeedModel
     global myPara
-
-    while True:
-        time.sleep(CONFIG.PICKLE_INTERVAL)
-        dump_dict = {
-            'local' : { 'name' : myName,
-                        'task' : task_type, 
-                        'port' : myPort},
-            'seed_name' : mySeedName,
-            'seed_model' : mySeedModel,
-            'para' : myPara,
-        }
-        with open(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_SEED), "wb") as f:
-            pickle.dump(dump_dict, f)
+    os.makedirs(CONFIG.PICKLE_DIR, exist_ok=True)
+    # only dump once 
+    dump_dict = {
+        'local' : { 'name' : myName,
+                    'task' : task_type, 
+                    'port' : myPort},
+        'seed_name' : mySeedName,
+        'seed_model' : mySeedModel,
+        'para' : myPara,
+    }
+    safe_dump(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_SEED), dump_dict)
 
 rewardRecord = RewardDB(myMembers, myPara, myName)
 
@@ -225,9 +220,8 @@ if __name__ == '__main__':
     # memListThread.setDaemon(True)
     # memListThread.start()
 
-    saveThread = threading.Thread(target=stateSaver)
-    saveThread.setDaemon(True)
-    saveThread.start()
+    stateSaver()
+    # seed only dump once
 
     seed.run(host='0.0.0.0', port=int(myPort))
 

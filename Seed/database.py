@@ -9,6 +9,7 @@ from threading import Thread, Lock
 import time
 import requests
 import pickle
+import os
 
 import DecentSpec.Common.config as CONFIG
 from DecentSpec.Common.utils import genPickleName, genName, print_log
@@ -139,6 +140,7 @@ class RewardDB:
             print(self.rewardDict[node].showContribution())
         print("============== =============== ===============")
         if CONFIG.LOG_REWARD:
+            os.makedirs(CONFIG.LOG_DIR, exist_ok=True)
             with open(self.fileName, "w+") as f:
                 f.write("============== Reward Database ===============\n")
                 f.write("key     \trole \tmined\tupdate\treward\n")

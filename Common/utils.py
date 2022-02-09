@@ -1,4 +1,7 @@
 import random
+import os
+import shutil
+import pickle
 import time
 from datetime import datetime
 import string
@@ -31,6 +34,16 @@ class Intrpt:
         with self.lock:
             self.flag = True
             self.remark = remark
+
+def safe_dump(file_name, dump_dict):
+    print_log("pickle", "start saving state for " + file_name)
+    if os.path.isfile(file_name):
+        shutil.copy2(file_name, file_name + "_backup" )
+    with open(file_name, "wb+") as f:
+        pickle.dump(dump_dict, f)
+    if os.path.isfile(file_name + "_backup"):
+        os.remove(file_name + "_backup")
+    print_log("pickle", "state saved!")
 
 def print_log(tag, content):
     print("[{}] {}".format(tag, content))
