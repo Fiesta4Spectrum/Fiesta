@@ -171,7 +171,6 @@ class FileLogger:
 
 class BlockChain:
     def __init__(self, logger):
-        # self.lock = Lock()
         self.chain = []
         self.logger = logger
 
@@ -185,23 +184,20 @@ class BlockChain:
         self.update_chain_print()
 
     def flush(self):
-        # with self.lock:
-            self.chain = []
-            self.file_log('flush')
+        self.chain = []
+        self.file_log('flush')
     
     def replace(self, new_chain):
-        # with self.lock:
-            self.chain = new_chain
-            self.file_log('replace')
-            self.update_chain_print()
+        self.chain = new_chain
+        self.file_log('replace')
+        self.update_chain_print()
 
     
     def get_chain_list(self):
-        # with self.lock:
-            chain_data = []
-            for block in self.chain:
-                chain_data.append(block.get_block_dict(shrank=False))
-            return chain_data
+        chain_data = []
+        for block in self.chain:
+            chain_data.append(block.get_block_dict(shrank=False))
+        return chain_data
     
     def get_chain_log(self):
         output = ""
@@ -219,39 +215,35 @@ class BlockChain:
 
     @property
     def last_block(self):
-        # with self.lock:
-            if len(self.chain) == 0:
-                return None
-            return self.chain[-1]
+        if len(self.chain) == 0:
+            return None
+        return self.chain[-1]
     
     @property
     def difficulty(self):
-        # with self.lock:
-            return self.last_block.difficulty
+        return self.last_block.difficulty
     
     @property
     def size(self):
-        # with self.lock:
-            return len(self.chain)
+        return len(self.chain)
 
     def valid_then_add(self, new_block):
-        # with self.lock:
-            my_last = self.last_block
-            # continuity check
-            if new_block.prev_hash != my_last.hash:
-                print_log("validate block", "noncontinuous hash link")
-                return False
-            if new_block.index != my_last.index + 1:
-                print_log("validate block", "fails for index mismatch")
-                return False
-            if new_block.hash != new_block.compute_hash():
-                print_log("validate block", "fails for wrong hash")
-                return False
-            # difficulty check
-            if (my_last.difficulty != new_block.difficulty) or (not difficultyCheck(new_block.hash, my_last.difficulty)):
-                print_log("validate block", "fails for difficulty requirement")
-                return False
-            self.chain.append(new_block)
-            self.file_log('grow')
-            self.update_chain_print()
-            return True
+        my_last = self.last_block
+        # continuity check
+        if new_block.prev_hash != my_last.hash:
+            print_log("validate block", "noncontinuous hash link")
+            return False
+        if new_block.index != my_last.index + 1:
+            print_log("validate block", "fails for index mismatch")
+            return False
+        if new_block.hash != new_block.compute_hash():
+            print_log("validate block", "fails for wrong hash")
+            return False
+        # difficulty check
+        if (my_last.difficulty != new_block.difficulty) or (not difficultyCheck(new_block.hash, my_last.difficulty)):
+            print_log("validate block", "fails for difficulty requirement")
+            return False            
+        self.chain.append(new_block)
+        self.file_log('grow')
+        self.update_chain_print()
+        return True
