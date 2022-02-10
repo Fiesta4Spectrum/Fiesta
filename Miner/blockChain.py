@@ -1,7 +1,8 @@
+from copyreg import pickle
 from threading import Lock, local
 import os
 from copy import deepcopy
-from DecentSpec.Common.utils import curTime, dict2tensor, difficultyCheck, hashValue, genTimestamp, tensor2dict, print_log
+from DecentSpec.Common.utils import *
 import DecentSpec.Common.config as CONFIG
 
 class Block:
@@ -20,26 +21,22 @@ class Block:
 
         # local models
         self.local_list = local_list
-        if not template:
+        if not template:                        # I propose a new block
             self.local_hash = hashValue(local_list) # the replacement for full local list when hashing
+            self.new_global = Block.ewma_mix(self.local_list, base_weight, para.alpha, self.index)
         else:
             self.local_hash = None
-        
-        # global model
-        self.base_global = base_weight
-        if not template:
-            self.new_global = Block.ewma_mix(self.local_list, self.base_global, para.alpha, self.index)
-        else:
             self.new_global = None
+
     
     def get_block_dict(self, shrank, with_hash=True):
         shrank_block = self.__dict__.copy()
         if not with_hash:
             shrank_block.pop('hash')
+        
         if shrank:
             shrank_block.pop('local_list')
             shrank_block.pop('new_global')
-            shrank_block.pop('base_global')
         else:
             # when we need to keep the local list information
             local_list_shrank = deepcopy(self.local_list)
@@ -149,13 +146,15 @@ class FileLogger:
         self.__log_path = CONFIG.LOG_DIR + "miner_{}.txt".format(name)
         self.__chain_path = CONFIG.LOG_DIR + "chain_{}.txt".format(name)
         self.zero = 0
+        self.name = name
     def print_chain(self, chain):
         with open(self.__chain_path, "w+") as f:
-            f.write("#\tP-Hash\tHash\tMiner\tLoss\tLocal_weights\n")
+            f.write("#\tP-Hash\tHash\tMiner\tLoss\tTime\t\tLocal_weights\n")
             sum_delay = 0.0
             sum_size = 0
-            for block in chain:
-                f.write("{}\t{}\t{}\t{}\t{:.4f}\t{}\n".format(block.index, block.prev_hash[:6], block.hash[:6], block.miner[:6], Block.gen_global_loss(block), block.print_list()))
+            for block_name in chain:
+                block = loadBlock_pub(CONFIG.BLOCK_DIR + self.name + "/", block_name)
+                f.write("{}\t{}\t{}\t{}\t{:.4f}\t{}\t{}\n".format(block.index, block.prev_hash[:6], block.hash[:6], block.miner[:6], Block.gen_global_loss(block), int(block.time_stamp), block.print_list()))
                 delay, size = block.delay_stat()
                 sum_delay += delay
                 sum_size += size
@@ -169,49 +168,69 @@ class FileLogger:
             f.write("start from: {}\n".format(curTime()))
         self.zero = genTimestamp()
 
+
 class BlockChain:
     def __init__(self, logger):
-        # self.lock = Lock()
+        self.block_dir = CONFIG.BLOCK_DIR + logger.name + "/"
+        os.makedirs(self.block_dir, exist_ok=True)
         self.chain = []
         self.logger = logger
+
+    def dumpBlock(self, new_block):
+        file_name = genBlockFileName(new_block)
+        with open(self.block_dir + file_name, "wb+") as f:
+            pickle.dump(new_block, f)
+        return file_name
+
+    def loadBlock(self, file_name):
+        with open(self.block_dir + file_name, "rb") as f:
+            my_block = pickle.load(f)
+        return my_block
+
 
     def create_genesis_block(self, para):
         self.flush()
         genesis_block = Block([], CONFIG.GENESIS_HASH, 0, 0, para, para.seeder, None)
         genesis_block.new_global = para.init_weight
         genesis_block.hash = genesis_block.compute_hash()
-        self.chain.append(genesis_block)
+        self.chain.append(self.dumpBlock(genesis_block))
         self.file_log('genesis')
         self.update_chain_print()
 
     def flush(self):
-        # with self.lock:
-            self.chain = []
-            self.file_log('flush')
+        self.chain = []
+        cleanDir(self.block_dir)
+        self.file_log('flush')
     
-    def replace(self, new_chain):
-        # with self.lock:
-            self.chain = new_chain
-            self.file_log('replace')
-            self.update_chain_print()
+    def replace(self, new_chain, rm_base_global = False):
+        self.flush()
+        for block in new_chain:
+            if rm_base_global:
+                try:
+                    block.delattr('base_global')
+                except:
+                    pass
+            self.chain.append(self.dumpBlock(block))
+        self.file_log('replace')
+        self.update_chain_print()
 
+    def get_chain_details(self):
+        chain_data = []
+        for block_name in self.chain:
+            chain_data.append(self.loadBlock(block_name).get_block_dict(shrank=False))
+        return chain_data
     
-    def get_chain_list(self):
-        # with self.lock:
-            chain_data = []
-            for block in self.chain:
-                chain_data.append(block.get_block_dict(shrank=False))
-            return chain_data
-    
-    def get_chain_log(self):
-        output = ""
-        for block in self.chain:
-            output +=  "{}({}){}[{},{}] ".format(block.prev_hash[:5], block.miner[:5], block.hash[:5], len(block.local_list), Block.size_in_char(block))
+    def get_chain_brief(self):
+        # output = ""
+        # for block_name in self.chain:
+        #     block = self.loadBlock(block_name)
+        #     output +=  "{}({}){}[{},{}] ".format(block.prev_hash[:5], block.miner[:5], block.hash[:5], len(block.local_list), Block.size_in_char(block))
+        output = " ".join(self.chain)
         return output
     
     def file_log(self, tag):
         if CONFIG.LOG_MINER:
-            self.logger.log("chain_" + tag, self.get_chain_log())
+            self.logger.log("chain_" + tag, self.get_chain_brief())
     
     def update_chain_print(self):
         if CONFIG.LOG_CHAIN:
@@ -219,39 +238,35 @@ class BlockChain:
 
     @property
     def last_block(self):
-        # with self.lock:
-            if len(self.chain) == 0:
-                return None
-            return self.chain[-1]
+        if len(self.chain) == 0:
+            return None
+        return self.loadBlock(self.chain[-1])
     
     @property
     def difficulty(self):
-        # with self.lock:
-            return self.last_block.difficulty
+        return self.last_block.difficulty
     
     @property
     def size(self):
-        # with self.lock:
-            return len(self.chain)
+        return len(self.chain)
 
     def valid_then_add(self, new_block):
-        # with self.lock:
-            my_last = self.last_block
-            # continuity check
-            if new_block.prev_hash != my_last.hash:
-                print_log("validate block", "noncontinuous hash link")
-                return False
-            if new_block.index != my_last.index + 1:
-                print_log("validate block", "fails for index mismatch")
-                return False
-            if new_block.hash != new_block.compute_hash():
-                print_log("validate block", "fails for wrong hash")
-                return False
-            # difficulty check
-            if (my_last.difficulty != new_block.difficulty) or (not difficultyCheck(new_block.hash, my_last.difficulty)):
-                print_log("validate block", "fails for difficulty requirement")
-                return False
-            self.chain.append(new_block)
-            self.file_log('grow')
-            self.update_chain_print()
-            return True
+        my_last = self.last_block
+        # continuity check
+        if new_block.prev_hash != my_last.hash:
+            print_log("validate block", "noncontinuous hash link")
+            return False
+        if new_block.index != my_last.index + 1:
+            print_log("validate block", "fails for index mismatch")
+            return False
+        if new_block.hash != new_block.compute_hash():
+            print_log("validate block", "fails for wrong hash")
+            return False
+        # difficulty check
+        if (my_last.difficulty != new_block.difficulty) or (not difficultyCheck(new_block.hash, my_last.difficulty)):
+            print_log("validate block", "fails for difficulty requirement")
+            return False            
+        self.chain.append(self.dumpBlock(new_block))
+        self.file_log('grow')
+        self.update_chain_print()
+        return True

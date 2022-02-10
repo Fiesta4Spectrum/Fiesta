@@ -17,7 +17,7 @@ class TV_CHANNEL_TASK:
         'batch' : 10,
         'lr'    : 0.001,
         'opt'   : 'Adam',
-        'epoch' : 5,                            # local epoch Num
+        'epoch' : 10,                            # local epoch Num
         'loss'  : 'MSE',
     }
     FULL_FILE_PATH = "../Dataset/GPS_power.dat"
