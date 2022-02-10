@@ -73,6 +73,13 @@ def genPickleName(id, content, remark=None):
         return "{}_{}.pickle".format(content, id[0:5])
     return "{}_{}_{}.pickle".format(content, id[0:5], remark)
 
+def genBlockFileName(new_block):
+    return "{}_{}_{}.b".format(new_block.index, new_block.hash[:5], new_block.miner[:5])
+
+def cleanDir(dirPath):
+    for file in os.scandir(dirPath):
+        os.remove(file.path)
+
 # store and load weights
 def save_weights_into_dict(model):
     return tensor2dict(model.state_dict())
@@ -91,3 +98,15 @@ def tensor2dict(myWeight):
     for key in myWeight.keys():
         myDict[key] = myWeight[key].tolist()
     return myDict
+
+def dumpBlock_pub(path, new_block):
+    os.makedirs(path, exist_ok=True)
+    file_name = genBlockFileName(new_block)
+    with open(path + file_name, "wb+") as f:
+        pickle.dump(new_block, f)
+    return file_name
+
+def loadBlock_pub(path, file_name):
+    with open(path + file_name, "rb") as f:
+        my_block = pickle.load(f)
+    return my_block

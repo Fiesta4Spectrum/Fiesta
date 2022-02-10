@@ -6,13 +6,16 @@ LOG_CHAIN = True
 LOG_REWARD = True
 
 # state save realted
-PICKLE_INTERVAL = 20    # reserve the miner state 
+PICKLE_INTERVAL = 600    # reserve the miner state 
                         # seed has no state, so only reserve once
                         # but the latest global will be pickled in database.py
 PICKLE_DIR = "decentspec_pickle/"
 PICKLE_GLOBAL = "global"
 PICKLE_MINER = "miner"
 PICKLE_SEED = "seed"
+
+# block data related
+BLOCK_DIR = "decentspec_blocks/"
 
 # COMMON 
 DEFAULT_NAME_LENGTH = 10

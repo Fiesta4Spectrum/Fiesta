@@ -85,7 +85,7 @@ myLogger = FileLogger(myName)
 myLogger.calibrate()
 myChain = BlockChain(myLogger)
 if RECOVERY_FLAG:
-    myChain.chain = last_state['chain'].chain
+    myChain.replace(last_state['chain'].chain, rm_base_global=True)
 
 myPool = Pool(myLogger)
 powIntr = Intrpt('pow interrupt')
@@ -208,7 +208,7 @@ def get_chain():
 
     data = {
         'length' : myChain.size,
-        'chain' : myChain.get_chain_list(),
+        'chain' : myChain.get_chain_details(),
     }
     return json.dumps(data)
 
@@ -290,7 +290,6 @@ def stateSaver():
     os.makedirs(CONFIG.PICKLE_DIR, exist_ok=True)
 
     while True:
-        time.sleep(CONFIG.PICKLE_INTERVAL)
         dump_dict = {
             'local' : { 'name' : myName,
                         'seed_server' : mySeedServer, 
@@ -303,6 +302,7 @@ def stateSaver():
             'para' : myPara,
         }
         safe_dump(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_MINER), dump_dict)
+        time.sleep(CONFIG.PICKLE_INTERVAL)
 
 # pow thread setup =================================
 
@@ -433,7 +433,7 @@ def extract_block_from_dict(resp):
         resp['index'],
         myPara,     # dummy and as a placeholder here
         resp['miner'],
-        resp['base_global'],
+        None,       # base global is none: it is a block from outside, template must be true
         template=True
     )
     template.hash = resp['hash']
