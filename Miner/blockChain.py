@@ -178,6 +178,8 @@ class BlockChain:
 
     def dumpBlock(self, new_block):
         file_name = genBlockFileName(new_block)
+        if os.path.isfile(self.block_dir + file_name):
+            return file_name
         with open(self.block_dir + file_name, "wb+") as f:
             pickle.dump(new_block, f)
         return file_name
@@ -189,7 +191,6 @@ class BlockChain:
 
 
     def create_genesis_block(self, para):
-        self.flush()
         genesis_block = Block([], CONFIG.GENESIS_HASH, 0, 0, para, para.seeder, None)
         genesis_block.new_global = para.init_weight
         genesis_block.hash = genesis_block.compute_hash()

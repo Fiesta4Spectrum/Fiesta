@@ -79,18 +79,21 @@ class Contributor:
         self.role = role
         self.mined_block = 0
         self.shared_weight = 0
+        self.total_size = 0
         self.reward = 0
     def submit(self, size, lossDelta):
         self.shared_weight += 1
         # print("get a local update with size {} and loss {}".format(size, lossDelta))
         if lossDelta > Contributor.DELTA_THRESHOLD:
             self.reward += int(size) * float(lossDelta)
+            self.total_size += int(size)
     def mine(self):
         self.mined_block += 1
     def showContribution(self):
         return  self.key + '\t' + self.role + ' \t' + \
                 str(self.mined_block) + '   \t' + \
-                str(self.shared_weight) + '    \t' +str(self.reward)
+                str(self.shared_weight) + '    \t' + \
+                str(self.total_size) + '  \t' + str(self.reward)
 
 class RewardDB:
     def __init__(self, MinerDB, para, name):
@@ -135,7 +138,7 @@ class RewardDB:
     
     def __print(self):
         print("============== Reward Database ===============")
-        print("key     \trole \tmined\tupdate\treward")
+        print("key     \trole \tmined\tupdate\tsize     \treward")
         for node in self.rewardDict:
             print(self.rewardDict[node].showContribution())
         print("============== =============== ===============")
@@ -143,7 +146,7 @@ class RewardDB:
             os.makedirs(CONFIG.LOG_DIR, exist_ok=True)
             with open(self.fileName, "w+") as f:
                 f.write("============== Reward Database ===============\n")
-                f.write("key     \trole \tmined\tupdate\treward\n")
+                f.write("key     \trole \tmined\tupdate\tsize     \treward\n")
                 for node in self.rewardDict:
                     f.write(self.rewardDict[node].showContribution() + "\n")
                 f.write("============== =============== ===============\n")

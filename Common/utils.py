@@ -102,6 +102,8 @@ def tensor2dict(myWeight):
 def dumpBlock_pub(path, new_block):
     os.makedirs(path, exist_ok=True)
     file_name = genBlockFileName(new_block)
+    if os.path.isfile(path + file_name):
+        return file_name
     with open(path + file_name, "wb+") as f:
         pickle.dump(new_block, f)
     return file_name

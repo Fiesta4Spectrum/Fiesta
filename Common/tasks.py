@@ -28,7 +28,7 @@ class MULTI_TV_CHANNEL_TASK:
     ALPHA = 0.5
     DEFAULT_NN_STRUCTURE = [2,50,50,50,8]
     SAMPLE_PARA = {
-        'center_freq' : 525000000,
+        'center_freq' : 675000000,
         'bandwidth'   : 50000000,
     }
     PREPROC_PARA = {
