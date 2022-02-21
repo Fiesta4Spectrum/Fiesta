@@ -204,6 +204,7 @@ class BlockChain:
         self.file_log('flush')
     
     def replace(self, new_chain, rm_base_global = False):
+        self.chain = []
         for block in new_chain:
             if rm_base_global:
                 try:

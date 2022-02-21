@@ -85,7 +85,7 @@ myLogger = FileLogger(myName)
 myLogger.calibrate()
 myChain = BlockChain(myLogger)
 if RECOVERY_FLAG:
-    myChain.replace(last_state['chain'].chain, rm_base_global=True)
+    myChain.chain = last_state['chain'].chain
 
 myPool = Pool(myLogger)
 powIntr = Intrpt('pow interrupt')

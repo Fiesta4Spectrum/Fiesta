@@ -191,7 +191,7 @@ def flush():
     mySeedModel = migrate_from_dump()
     genSeedName() # change the seed name
     post_object = {
-        'name' : mySeedName,
+        'seed_name' : mySeedName,
         'from' : myName,
         'seedWeight' : save_weights_into_dict(mySeedModel),
         'para' : myPara,
