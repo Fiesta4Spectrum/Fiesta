@@ -144,8 +144,10 @@ def reseed():
         return "invalid", 400
     powIntr.set("Reseed!")
     myPool.flush()
-    myChain.flush()
+    # myChain.flush()
+    # do not flush plz!!!!
     myPara = extract_para_from_dict(seed)
+    myChain.switch(myPara.seed_name)
     myChain.create_genesis_block(myPara)
     return "reseeded", 201
 
@@ -268,6 +270,7 @@ def register():
             myPeers.remove(myAddr)
         if myPara == None or myPara.seed_name != resp.json()['seed_name']:
             myPara = extract_para_from_dict(resp.json())
+            myChain.switch(myPara.seed_name)
             myChain.create_genesis_block(myPara)
         reg_flag = True
     else:

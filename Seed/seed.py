@@ -203,6 +203,7 @@ def flush():
                         json=post_object)
         except requests.exceptions.ConnectionError:
             print_log("requests", "fails to connect to " + addr)
+    stateSaver() # plz save the new seed!!!!!!!!
     return "new seed injected", 200
 
 # another thread printing registered list periodically
