@@ -144,8 +144,8 @@ def reseed():
         return "invalid", 400
     powIntr.set("Reseed!")
     myPool.flush()
-    # myChain.flush()
-    # do not flush plz!!!!
+    myChain.flush()
+    # do not clean dir plz!!!! - solved
     myPara = extract_para_from_dict(seed)
     myChain.switch(myPara.seed_name)
     myChain.create_genesis_block(myPara)
