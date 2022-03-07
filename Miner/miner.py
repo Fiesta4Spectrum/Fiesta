@@ -73,7 +73,10 @@ elif (len(sys.argv) == 7):
     myPort = sys.argv[3]
     BLOCK_MIN_THRESHOLD = int(sys.argv[4])
     BLOCK_MAX_THRESHOLD = int(sys.argv[5])
-    myName = sys.argv[6]
+    if sys.argv[6][0] == 'R':
+        myName = genName()
+    else: 
+        myName = sys.argv[6]
 else:
     print("incorrect parameter")
     exit
@@ -98,36 +101,38 @@ else:
                     # not directly referenceds only used for duplication
 
 # PARTITION EXP FIELD =================================== /// ===============================
-# PARTITION = False
-# PARTITION_ST_INDEX = 7
-# PARTITION_ED_INDEX = 14
-# peer_access = 0             # input para {5} of partition map
+PARTITION = False
+PARTITION_ST_INDEX = 10
+PARTITION_ED_INDEX = 30
+peer_access = 0             # input para {5} of partition map
 
-# if len(sys.argv) == 7:      # activate partition if {5} exsits
-#     peer_access = int(sys.argv[6][1:])  # ignore the first letter R in the para
-#     if peer_access != 0:
-#         PARTITION = True
-
-# def accessible_miners():
-#     global myPeers
-#     global myChain
-#     global PARTITION
-
-#     if not PARTITION:
-#         return myPeers
-#     if myChain.size > PARTITION_ST_INDEX and \
-#        myChain.size <= PARTITION_ED_INDEX:
-#         if peer_access > 0:
-#             return myPeers[:peer_access]
-#         elif peer_access < 0:
-#             return myPeers[peer_access:]
-#     return myPeers
-    
-# ====================================================== /// ================================
+if len(sys.argv) == 7 and sys.argv[6][0] == 'R':
+      # activate partition if {5} exists
+    peer_access = int(sys.argv[6][1:])  # ignore the first letter R in the para
+    if peer_access != 0:
+        PARTITION = True
 
 def accessible_miners():
     global myPeers
+    global myChain
+    global PARTITION
+
+    myPeers.sort()
+    if not PARTITION:
+        return myPeers
+    if myChain.size >= PARTITION_ST_INDEX and \
+       myChain.size <= PARTITION_ED_INDEX:
+        if peer_access > 0:
+            return myPeers[:peer_access]
+        elif peer_access < 0:
+            return myPeers[peer_access:]
     return myPeers
+    
+# ====================================================== /// ================================
+
+# def accessible_miners():
+#     global myPeers
+#     return myPeers
 
 # flask api setup ========================================
 

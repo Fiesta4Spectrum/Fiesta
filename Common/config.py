@@ -19,7 +19,7 @@ BLOCK_DIR = "decentspec_blocks/"
 
 # COMMON 
 DEFAULT_NAME_LENGTH = 10
-SEED_ADDR = "http://api.decentspec.org:8000"
+SEED_ADDR = "http://127.0.0.1:8000"
 POW_ENABLE = True # false will disable the difficulty check which we do not care hash anymore
 REPRODUCIBILITY = True
 

@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import DecentSpec.Common.config as CONFIG
 
 if CONFIG.REPRODUCIBILITY:
-    torch.manual_seed(32767)
+    torch.manual_seed(3407) # magic number
 
 class FNNModel(nn.Module):
 
