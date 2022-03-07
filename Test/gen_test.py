@@ -48,7 +48,7 @@ def genShell(tag):
 
     for i in range(0, edge_num):
         train_file_path = "DecentSpec/Test/{}/train_{}.dat".format(dataset_path, i)
-        shell_file.write("xterm -T edge{} -e python3 -m DecentSpec.EdgeSim.edge train {} {} {} {} &\n".format(CONFIG.SEED_ADDR, i, train_file_path, 0, round))         #  size zero refers to full set
+        shell_file.write("xterm -T edge{} -e python3 -m DecentSpec.EdgeSim.edge train {} {} {} {} &\n".format(i, CONFIG.SEED_ADDR, train_file_path, 0, round))         #  size zero refers to full set
 
     test_file_path = "DecentSpec/Test/{}/test.dat".format(dataset_path)
     shell_file.write("xterm -T loss_tester -e python3 -m DecentSpec.EdgeSim.edge test {} {} {} {} &\n".format(CONFIG.SEED_ADDR, test_file_path, 0, 0))            #  size zero refers to full set

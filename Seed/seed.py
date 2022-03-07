@@ -23,6 +23,17 @@ usage:
             "tv"    : tv channel regression
             "anom"  : anomaly detection
     {2} - int, port number
+
+    python -m DecentSpec.Seed.seed {1}
+    {1} - pickle file of states
+
+    python -m DecentSpec.Seed.seed {1} {2} {3}
+    {1} - task type:
+            "tv"    : tv channel regression
+            "anom"  : anomaly detection
+    {2} - int, port number
+    {3} - pickle file of weights
+
 '''
 
 seed = Flask(__name__)
@@ -38,6 +49,8 @@ SEED = None
         # }
         
 RECOVERY_FLAG = False
+WEIGHT_FROM_PICKLE = False
+
 if (len(sys.argv) == 2):
     # state recover
     RECOVERY_FLAG = True
@@ -51,6 +64,13 @@ elif (len(sys.argv) == 3):
     # dynamic import Task seed
     myPort = sys.argv[2]
     myName = genName()  # name of this seed server
+elif (len(sys.argv) == 4):
+    task_type = sys.argv[1]
+    # dynamic import Task seed
+    myPort = sys.argv[2]
+    myName = genName()  # name of this seed server
+    weightSource = sys.argv[3]
+    WEIGHT_FROM_PICKLE = True
 else:
     print("wrong argument, check usage")
     exit()
@@ -70,10 +90,32 @@ layerStructure = SEED.DEFAULT_NN_STRUCTURE
 def genSeedName():
     global mySeedName
     mySeedName = SEED.NAME + "_" + genName(3)
+def migrate_from_dump(globalName, extendOutput=0):
+    global layerStructure
+
+    # TODO use the previous dumped global model
+    ret = FNNModel(layerStructure)  # actually you should make sure layerstructure consistent with extendOutput
+    
+    with open(globalName, "rb") as f:
+        expended_weight = pickle.load(f)
+    # print("[migration] before:")
+    # print(expended_weight)
+    first_neuron_weight = expended_weight['ol.weight'][0]
+    first_neuron_bias = expended_weight['ol.bias'][0]
+    for i in range(0, extendOutput):
+        expended_weight['ol.weight'].append(first_neuron_weight)
+        expended_weight['ol.bias'].append(first_neuron_bias)
+    # print("[migration] after:")
+    # print(expended_weight)
+    load_weights_from_dict(ret, expended_weight)
+    return ret
 
 if (not RECOVERY_FLAG):
     genSeedName()
-    mySeedModel = FNNModel(layerStructure)
+    if WEIGHT_FROM_PICKLE:
+        mySeedModel = migrate_from_dump(weightSource)
+    else:
+        mySeedModel = FNNModel(layerStructure)
     myPara = {
         'alpha' : SEED.ALPHA,
         'preprocPara' : SEED.PREPROC_PARA,
@@ -146,27 +188,6 @@ def reg_miner():
     # print(ret["para"])
     return json.dumps(ret)
 
-def migrate_from_dump():
-    global layerStructure
-    global myName
-
-    # TODO use the previous dumped global model
-    ret = FNNModel(layerStructure)
-    
-    with open(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_GLOBAL), "rb") as f:
-        expended_weight = pickle.load(f)
-    # print("[migration] before:")
-    # print(expended_weight)
-    first_neuron_weight = expended_weight['ol.weight'][0]
-    first_neuron_bias = expended_weight['ol.bias'][0]
-    for i in range(0, 7):
-        expended_weight['ol.weight'].append(first_neuron_weight)
-        expended_weight['ol.bias'].append(first_neuron_bias)
-    # print("[migration] after:")
-    # print(expended_weight)
-    load_weights_from_dict(ret, expended_weight)
-    return ret
-
 # ask this new seed to reseed the network
 @seed.route(CONFIG.API_TV_TO_MULTITV, methods=['GET'])
 def flush():   
@@ -175,6 +196,7 @@ def flush():
     global myPara
     global layerStructure
     global SEED
+    global myName
 
     SEED = getattr(import_module("DecentSpec.Common.tasks"), "MULTI_TV_CHANNEL_TASK")
 
@@ -189,7 +211,7 @@ def flush():
         'difficulty' : SEED.DIFFICULTY,
     }
 
-    mySeedModel = migrate_from_dump()
+    mySeedModel = migrate_from_dump(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_GLOBAL), 7)
     genSeedName() # change the seed name
     post_object = {
         'seed_name' : mySeedName,
