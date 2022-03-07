@@ -86,6 +86,13 @@ myLogger.calibrate()
 myChain = BlockChain(myLogger)
 if RECOVERY_FLAG:
     myChain.chain = last_state['chain'].chain
+    if not hasattr(last_state['chain'], "seed_dir") or \
+        last_state['chain'].seed_dir == "":
+        print("[WARN] Please specify previous seed name:")
+        prev_seed = input()
+        myChain.switch(prev_seed)
+    else:
+        myChain.seed_dir = last_state['chain'].seed_dir
 
 myPool = Pool(myLogger)
 powIntr = Intrpt('pow interrupt')
@@ -312,11 +319,17 @@ def stateSaver():
 def mine():
     global myPool
     global myChain
-
+    ctr = 0
     while True:
         time.sleep(CONFIG.BLOCK_GEN_INTERVAL)
+        ctr = (ctr + 1) % CONFIG.MINER_WATCHDOG_INTERVAL
+        if ctr == 0:
+            print("[mine] Mine thread is alive")
         if myPara == None:
             print_log("mine", "not registered yet")
+            continue
+        if myChain == None:
+            print_log("chain not init yet")
             continue
         if myChain.difficulty < 1:
             print_log("mine", "difficulty not set")

@@ -84,6 +84,7 @@ if (not RECOVERY_FLAG):
     } 
 else:
     mySeedName = last_state['seed_name']
+    print("My seed name: ", mySeedName)
     mySeedModel = last_state['seed_model']
     myPara = last_state['para']
 

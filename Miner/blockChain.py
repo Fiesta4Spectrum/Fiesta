@@ -174,15 +174,13 @@ class FileLogger:
 
 class BlockChain:
     def __init__(self, logger):
-        os.makedirs(self.block_dir, exist_ok=True)
-        self.chain = []
         self.logger = logger
         self.seed_dir = ""
+        self.chain = []
     
     @property
     def block_dir(self):
         return CONFIG.BLOCK_DIR + self.logger.name + "/" + self.seed_dir
-
 
     def dumpBlock(self, new_block):
         file_name = genBlockFileName(new_block)
@@ -219,6 +217,8 @@ class BlockChain:
 
     def replace(self, new_chain, rm_base_global = False):
         self.chain = []
+        # replace only happens when outcoming chain shares the same seed_name with my old chain
+        # no switch is needed
         for block in new_chain:
             if rm_base_global:
                 try:
