@@ -93,6 +93,7 @@ if RECOVERY_FLAG:
         myChain.switch(prev_seed)
     else:
         myChain.seed_dir = last_state['chain'].seed_dir
+        myLogger.seed_dir = myChain.seed_dir
 
 myPool = Pool(myLogger)
 powIntr = Intrpt('pow interrupt')
