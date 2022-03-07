@@ -31,6 +31,7 @@ ASYNC_SIM = True            # enable async simulation
 MINER_REG_INTERVAL = 19
 GENESIS_HASH = "genesis_hash"
 BLOCK_GEN_INTERVAL = 1      # seconds between mining
+MINER_WATCHDOG_INTERVAL = 20
 STRICT_BLOCK_SIZE = False    # True: each block size will be max
                             # False: each block size will be min~max
 ONE_AUTHOR_ONE_LOCAL = True

@@ -147,13 +147,16 @@ class FileLogger:
         self.__chain_path = CONFIG.LOG_DIR + "chain_{}.txt".format(name)
         self.zero = 0
         self.name = name
+        self.seed_dir = ""
+    def switch(self, new_seed):
+        self.seed_dir = new_seed + "/"
     def print_chain(self, chain):
         with open(self.__chain_path, "w+") as f:
             f.write("#\tP-Hash\tHash\tMiner\tLoss\tTime\t\tLocal_weights\n")
             sum_delay = 0.0
             sum_size = 0
             for block_name in chain:
-                block = loadBlock_pub(CONFIG.BLOCK_DIR + self.name + "/", block_name)
+                block = loadBlock_pub(CONFIG.BLOCK_DIR + self.name + "/" + self.seed_dir, block_name)
                 f.write("{}\t{}\t{}\t{}\t{:.4f}\t{}\t{}\n".format(block.index, block.prev_hash[:6], block.hash[:6], block.miner[:6], Block.gen_global_loss(block), int(block.time_stamp), block.print_list()))
                 delay, size = block.delay_stat()
                 sum_delay += delay
@@ -171,10 +174,13 @@ class FileLogger:
 
 class BlockChain:
     def __init__(self, logger):
-        self.block_dir = CONFIG.BLOCK_DIR + logger.name + "/"
-        os.makedirs(self.block_dir, exist_ok=True)
-        self.chain = []
         self.logger = logger
+        self.seed_dir = ""
+        self.chain = []
+    
+    @property
+    def block_dir(self):
+        return CONFIG.BLOCK_DIR + self.logger.name + "/" + self.seed_dir
 
     def dumpBlock(self, new_block):
         file_name = genBlockFileName(new_block)
@@ -194,17 +200,25 @@ class BlockChain:
         genesis_block = Block([], CONFIG.GENESIS_HASH, 0, 0, para, para.seeder, None)
         genesis_block.new_global = para.init_weight
         genesis_block.hash = genesis_block.compute_hash()
-        self.chain.append(self.dumpBlock(genesis_block))
+        self.logger.log('NEW CHAIN', 'new chain injected, flush chain, but block file is reserved')
+        self.chain = [self.dumpBlock(genesis_block)]
         self.file_log('genesis')
         self.update_chain_print()
 
     def flush(self):
         self.chain = []
-        cleanDir(self.block_dir)
+        # cleanDir(self.block_dir)
         self.file_log('flush')
     
+    def switch(self, new_seed):
+        self.seed_dir = new_seed + "/"
+        self.logger.switch(new_seed)
+        os.makedirs(self.block_dir, exist_ok=True)
+
     def replace(self, new_chain, rm_base_global = False):
         self.chain = []
+        # replace only happens when outcoming chain shares the same seed_name with my old chain
+        # no switch is needed
         for block in new_chain:
             if rm_base_global:
                 try:

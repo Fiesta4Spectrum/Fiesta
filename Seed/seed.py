@@ -110,11 +110,7 @@ def migrate_from_dump(globalName, extendOutput=0):
     load_weights_from_dict(ret, expended_weight)
     return ret
 
-if RECOVERY_FLAG:
-    mySeedName = last_state['seed_name']
-    mySeedModel = last_state['seed_model']
-    myPara = last_state['para']
-else:
+if (not RECOVERY_FLAG):
     genSeedName()
     if WEIGHT_FROM_PICKLE:
         mySeedModel = migrate_from_dump(weightSource)
@@ -128,7 +124,11 @@ else:
         'layerStructure' : layerStructure,
         'difficulty' : SEED.DIFFICULTY,
     } 
-    
+else:
+    mySeedName = last_state['seed_name']
+    print("My seed name: ", mySeedName)
+    mySeedModel = last_state['seed_model']
+    myPara = last_state['para']
 
 def stateSaver():
     global mySeedName
@@ -226,6 +226,7 @@ def flush():
                         json=post_object)
         except requests.exceptions.ConnectionError:
             print_log("requests", "fails to connect to " + addr)
+    stateSaver() # plz save the new seed!!!!!!!!
     return "new seed injected", 200
 
 # another thread printing registered list periodically
