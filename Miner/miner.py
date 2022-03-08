@@ -12,7 +12,7 @@ from flask import Flask, request
 import DecentSpec.Common.config as CONFIG
 from DecentSpec.Common.utils import ChainFetcher, difficultyCheck, genName, genPickleName, genTimestamp, hashValue, print_log, Intrpt, safe_dump
 from DecentSpec.Miner.asyncPost import AsyncPost
-from DecentSpec.Miner.blockChain import Block, BlockChain, FileLogger, extract_block_from_dict
+from DecentSpec.Miner.blockChain import Block, BlockChain, ChainState, FileLogger, extract_block_from_dict
 from DecentSpec.Miner.pool import Pool
 from DecentSpec.Miner.para import Para, extract_para_from_dict
 
@@ -341,7 +341,7 @@ def stateSaver():
                         'block_min' : BLOCK_MIN_THRESHOLD,
                         'block_max' : BLOCK_MAX_THRESHOLD
                         },
-            'chain' : myChain,
+            'chain' : ChainState(myChain.chain, myChain.seed_dir),
             'para' : myPara,
         }
         safe_dump(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_MINER), dump_dict)

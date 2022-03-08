@@ -173,6 +173,10 @@ class FileLogger:
             f.write("start from: {}\n".format(curTime()))
         self.zero = genTimestamp()
 
+class ChainState:
+    def __init__(self, chain, seed):
+        self.chain = chain
+        self.seed_dir = seed
 
 class BlockChain:
     def __init__(self, logger):
