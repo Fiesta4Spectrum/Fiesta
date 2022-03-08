@@ -1,4 +1,6 @@
 import pickle
+import re
+from werkzeug import serving
 import os
 import sys
 from threading import Thread
@@ -8,11 +10,11 @@ import time
 from flask import Flask, request
 
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import difficultyCheck, genName, genPickleName, genTimestamp, hashValue, print_log, Intrpt, safe_dump
+from DecentSpec.Common.utils import ChainFetcher, difficultyCheck, genName, genPickleName, genTimestamp, hashValue, print_log, Intrpt, safe_dump
 from DecentSpec.Miner.asyncPost import AsyncPost
-from DecentSpec.Miner.blockChain import Block, BlockChain, FileLogger
+from DecentSpec.Miner.blockChain import Block, BlockChain, ChainState, FileLogger, extract_block_from_dict
 from DecentSpec.Miner.pool import Pool
-from DecentSpec.Miner.para import Para
+from DecentSpec.Miner.para import Para, extract_para_from_dict
 
 # local field init ========================
 
@@ -219,9 +221,13 @@ def get_global():
 @miner.route(CONFIG.API_GET_BLOCK, methods=['GET'])
 def get_block():
     global myChain
-    id = request.args.get('id', default=-1, type=int)
+    id_str = request.args.get('id', default=-1, type=str)
+    try:
+        id = int(id_str)
+    except ValueError:
+        return "invalid block id", 400
     if id >= len(myChain.chain):
-        return "Index error", 400
+        return "Index out of range", 400
     required_block = myChain.loadBlock(myChain.chain[id]).get_block_dict(shrank=False)
     ret = { 'id': id,
             'block': required_block}
@@ -233,7 +239,18 @@ def get_chain():
 
     data = {
         'length' : myChain.size,
-        'chain' : myChain.get_chain_details(),
+        'chain' : None,
+        'remark' : 'it is decrapted'
+    }
+    return json.dumps(data)
+
+@miner.route(CONFIG.API_GET_CHAIN_PRINT, methods=['GET'])
+def get_chain_print():
+    global myChain
+    global myPara
+    data = {
+        'seed_name' : myPara.seed_name,
+        'chain' : myChain.chain
     }
     return json.dumps(data)
 
@@ -324,7 +341,7 @@ def stateSaver():
                         'block_min' : BLOCK_MIN_THRESHOLD,
                         'block_max' : BLOCK_MAX_THRESHOLD
                         },
-            'chain' : myChain,
+            'chain' : ChainState(myChain.chain, myChain.seed_dir),
             'para' : myPara,
         }
         safe_dump(CONFIG.PICKLE_DIR + genPickleName(myName, CONFIG.PICKLE_MINER), dump_dict)
@@ -408,21 +425,24 @@ def consensus():
     global powIntr
 
     i_am_the_longest = True
-    new_longest = None
-    max_len = myChain.size
-
+    fetcher = None
     for peer in accessible_miners():
         try:
-            resp = requests.get(peer + CONFIG.API_GET_CHAIN_SIMPLE).json()  # get the short version
-            if resp['length'] > max_len:
-                resp = requests.get(peer + CONFIG.API_GET_CHAIN).json()     # get the full version to validate
-                new_chain = list(map(extract_block_from_dict, resp['chain']))
-                if valid_chain(new_chain) and len(new_chain) > max_len:
+            # resp = requests.get(peer + CONFIG.API_GET_CHAIN_SIMPLE).json()  # get the short version
+            # if resp['length'] > max_len:
+            #     resp = requests.get(peer + CONFIG.API_GET_CHAIN).json()     # get the full version to validate
+            #     new_chain = list(map(extract_block_from_dict, resp['chain']))
+            #     if valid_chain(new_chain) and len(new_chain) > max_len:
+            #         powIntr.set("Longer chain!")
+            #         i_am_the_longest = False
+            #         new_longest = new_chain
+            #         max_len = len(new_chain)
+            fetcher = ChainFetcher(peer)
+            if fetcher.length > myChain.size:
+                if same_seed_chain(fetcher):
                     powIntr.set("Longer chain!")
                     i_am_the_longest = False
-                    new_longest = new_chain
-                    max_len = len(new_chain)
-
+                    break
         except requests.exceptions.ConnectionError:
             print_log("requests", "fails to connect to " + peer)
 
@@ -430,7 +450,7 @@ def consensus():
          return True
 
     # replacement happens
-    myChain.replace(new_longest)
+    myChain.replace(fetcher)
     print_log("consensus", "get a longer chain from else where")
     myPool.flush()                                          # flush my pool
     return False
@@ -440,43 +460,6 @@ def announce_new_block(new_block):
 
 # helper methods ===================================
 
-def extract_para_from_dict(resp_dict):
-    # extract para from a json
-    para = resp_dict['para']
-    return Para(
-        preproc=para['preprocPara'],
-        train=para['trainPara'],
-        alpha=para['alpha'],
-        difficulty=para['difficulty'],
-        seeder=resp_dict['from'],
-        seed_name=resp_dict['seed_name'],
-        init_weight=resp_dict['seedWeight'],
-        nn_structure=para['layerStructure'],
-        sample_para=para['samplePara']
-    )
-
-def extract_block_from_dict(resp):
-    global myPara
-
-    template = Block(
-        resp['local_list'],
-        resp['prev_hash'],
-        resp['time_stamp'],
-        resp['index'],
-        myPara,     # dummy and as a placeholder here
-        resp['miner'],
-        None,       # base global is none: it is a block from outside, template must be true
-        template=True
-    )
-    template.hash = resp['hash']
-    template.nonce = resp['nonce']
-    template.difficulty = resp['difficulty']
-    template.seed_name = resp['seed_name']
-
-    template.local_hash = resp['local_hash']
-    template.new_global = resp['new_global']
-
-    return template
 
 def valid_resp(resp):
     if resp == None:
@@ -496,6 +479,15 @@ def valid_hash(new_block):
         return new_block.compute_hash() == new_block.hash
     return (new_block.compute_hash() == new_block.hash) and difficultyCheck(new_block.hash, new_block.difficulty)
 
+def same_seed_chain(chain_fetcher):
+    global myPara
+    latest_block = extract_block_from_dict(chain_fetcher.get(-1))
+    if latest_block.seed_name != myPara.seed_name:
+        print_log("chain validation", "outcoming chain from a different seed")
+        return False
+    else:
+        return True
+
 def valid_chain(new_chain):
     global myPara
     # valid it is a good chain
@@ -514,6 +506,22 @@ def valid_chain(new_chain):
             return False
         prev_hash = block.hash
     return True
+
+
+##### log filter
+
+disabled_endpoints = [CONFIG.API_GET_BLOCK + '[.]*', CONFIG.API_GET_CHAIN_SIMPLE, CONFIG.API_GET_GLOBAL, CONFIG.API_POST_LOCAL]
+
+parent_log_request = serving.WSGIRequestHandler.log_request
+
+def log_request(self, *args, **kwargs):
+    if not any(re.match(f"{de}", self.path) for de in disabled_endpoints):
+        parent_log_request(self, *args, **kwargs)
+
+serving.WSGIRequestHandler.log_request = log_request
+
+#####
+
 
 if __name__ == '__main__':
     # threads init ==============================

@@ -1,3 +1,5 @@
+from tkinter.tix import INTEGER
+import requests
 import random
 import os
 import shutil
@@ -11,6 +13,84 @@ from hashlib import sha256
 from threading import Lock
 
 import DecentSpec.Common.config as CONFIG
+
+class ChainFetcher:
+    FAILURE_TOLERANCE = 10
+    def __init__(self, miner):
+        self.target = miner
+        self.max_len = self.length
+        self.id = 0
+    
+    @property
+    def length(self):
+        try_ctr = 0
+        while try_ctr < ChainFetcher.FAILURE_TOLERANCE:
+            try:
+                resp = requests.get(self.target + CONFIG.API_GET_CHAIN_SIMPLE).json()
+                return resp['length']
+            except requests.exceptions.ConnectionError:
+                try_ctr += 1
+                continue
+        print_log("ChainFetcher", "Fails to fetch simple chain from {}".format(self.target))
+        return -1
+
+    def next(self):
+        if self.id >= self.max_len:
+            print_log("ChainFetcher", "oversized fetch from {}, asking for #{}".format(self.target, self.id))
+            return -1, None
+        r_b = self.get(self.id)
+        if r_b != None:
+            self.id += 1
+        return self.id, r_b
+
+    def __next__(self):
+        if self.id >= self.max_len:
+            raise StopIteration
+        self.id, b = self.next()
+        return b
+    def __iter__(self):
+        return self
+
+    def reset(self):
+        self.id = 0
+        self.max_len = self.length
+
+    def set(self, index):
+        self.id = index
+        self.max_len = self.length
+
+    def get(self, index):
+        try_ctr = 0
+        while try_ctr < ChainFetcher.FAILURE_TOLERANCE:
+            try:
+                # print("ChainFetcher", "gonna fetch #{} from {}".format(id, self.target))
+                resp = requests.get(self.target + CONFIG.API_GET_BLOCK + "?id=" + str(index)).json()
+                if resp['id'] == index:
+                    return resp['block']
+                else:
+                    try_ctr += 1
+                    continue
+            except requests.exceptions.ConnectionError:
+                try_ctr += 1
+                continue
+        print_log("ChainFetcher", "Fails to fetch #{} from {}".format(index, self.target))
+        return None
+        
+    
+    def chain(self):
+        try_ctr = 0
+        while try_ctr < ChainFetcher.FAILURE_TOLERANCE:
+            try:
+                # print("ChainFetcher", "gonna fetch #{} from {}".format(id, self.target))
+                resp = requests.get(self.target + CONFIG.API_GET_CHAIN_PRINT).json()
+                return resp['chain']
+            except requests.exceptions.ConnectionError:
+                try_ctr += 1
+                continue
+        print_log("ChainFetcher", "Fails to fetch chainlist from {}".format(self.target))
+        return None
+        
+
 
 class Intrpt:
     def __init__(self, desc="noDescription"):
