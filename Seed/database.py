@@ -12,7 +12,7 @@ import pickle
 import os
 
 import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import genPickleName, genName, print_log
+from DecentSpec.Common.utils import ChainFetcher, genPickleName, genName, print_log
 
 class MinerDB:
     def __init__(self):
@@ -112,29 +112,28 @@ class RewardDB:
         while True:
             peers = self.myMember.getList()
             print("scan the memberlist to compute reward")
+            time.sleep(CONFIG.SEED_CHAIN_SCAN_INTERVAL)
             current_len = 0
-            chain = []
             fromwhom = 'nobody'
-            longest_chain = []
+            longest_chain_fetcher = None
             for miner in peers:
                 try:
-                    response = requests.get(miner + CONFIG.API_GET_CHAIN)
-                    length = response.json()['length']
-                    chain = response.json()['chain']
-                    if length > current_len:
-                        current_len = length
-                        longest_chain = chain
+                    fetcher = ChainFetcher(miner)
+                    if fetcher.length > current_len:
+                        current_len = fetcher.length
+                        longest_chain_fetcher = fetcher
                         fromwhom = miner
                 except requests.exceptions.ConnectionError:
                     print_log("requests", "fails to connect to " + miner)
-            print("longest chain from {}".format(fromwhom))
-            if len(longest_chain) > 0:
-                latest_global_weight = longest_chain[-1]['new_global']
+            print("longest chain from {} with length".format(fromwhom, current_len))
+            if longest_chain_fetcher == None:
+                continue
+            if current_len > 0:
+                latest_global_weight = longest_chain_fetcher.get(-1)['new_global']
                 with open(CONFIG.PICKLE_DIR + genPickleName(self.name, CONFIG.PICKLE_GLOBAL),"wb") as f:
                     pickle.dump(latest_global_weight, f)
-            self.updateReward(longest_chain)
+            self.updateReward(longest_chain_fetcher)
             self.__print()
-            time.sleep(CONFIG.SEED_CHAIN_SCAN_INTERVAL)
     
     def __print(self):
         print("============== Reward Database ===============")
@@ -151,9 +150,9 @@ class RewardDB:
                     f.write(self.rewardDict[node].showContribution() + "\n")
                 f.write("============== =============== ===============\n")
     
-    def updateReward(self, dictChain):
+    def updateReward(self, chain_fetcher):
         self.__flush()  # calculate reward from the very first block
-        for block in dictChain:
+        for block in chain_fetcher:
             # calculate miner contribution
             # print("the miner of this block is {}".format(block['miner']))
             key = block['miner']

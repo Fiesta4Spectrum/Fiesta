@@ -1,4 +1,6 @@
 import pickle
+import re
+from werkzeug import serving
 import os
 import sys
 from threading import Thread
@@ -219,9 +221,13 @@ def get_global():
 @miner.route(CONFIG.API_GET_BLOCK, methods=['GET'])
 def get_block():
     global myChain
-    id = request.args.get('id', default=-1, type=int)
+    id_str = request.args.get('id', default=-1, type=str)
+    try:
+        id = int(id_str)
+    except ValueError:
+        return "invalid block id", 400
     if id >= len(myChain.chain):
-        return "Index error", 400
+        return "Index out of range", 400
     required_block = myChain.loadBlock(myChain.chain[id]).get_block_dict(shrank=False)
     ret = { 'id': id,
             'block': required_block}
@@ -514,6 +520,22 @@ def valid_chain(new_chain):
             return False
         prev_hash = block.hash
     return True
+
+
+##### log filter
+
+disabled_endpoints = [CONFIG.API_GET_BLOCK + '[.]*', CONFIG.API_GET_CHAIN_SIMPLE, CONFIG.API_GET_GLOBAL]
+
+parent_log_request = serving.WSGIRequestHandler.log_request
+
+def log_request(self, *args, **kwargs):
+    if not any(re.match(f"{de}", self.path) for de in disabled_endpoints):
+        parent_log_request(self, *args, **kwargs)
+
+serving.WSGIRequestHandler.log_request = log_request
+
+#####
+
 
 if __name__ == '__main__':
     # threads init ==============================
