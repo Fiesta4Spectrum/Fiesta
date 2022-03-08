@@ -295,6 +295,8 @@ class BlockChain:
         return len(self.chain)
 
     def valid_then_add(self, new_block, log_enable=True):
+        if new_block == None:
+            return False
         with self.lock:
             my_last = self.last_block
             # continuity check
@@ -318,7 +320,8 @@ class BlockChain:
         return True
 
 def extract_block_from_dict(resp):
-
+    if resp == None:
+        return None
     template = Block(
         resp['local_list'],
         resp['prev_hash'],

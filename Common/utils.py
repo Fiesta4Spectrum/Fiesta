@@ -31,9 +31,8 @@ class ChainFetcher:
             except requests.exceptions.ConnectionError:
                 try_ctr += 1
                 continue
-        if try_ctr == ChainFetcher.FAILURE_TOLERANCE:
-            print_log("ChainFetcher", "Fails to fetch simple chain from {}".format(self.target))
-            return -1
+        print_log("ChainFetcher", "Fails to fetch simple chain from {}".format(self.target))
+        return -1
 
     def next(self):
         if self.id >= self.max_len:
@@ -67,17 +66,16 @@ class ChainFetcher:
                 # print("ChainFetcher", "gonna fetch #{} from {}".format(id, self.target))
                 resp = requests.get(self.target + CONFIG.API_GET_BLOCK + "?id=" + str(index)).json()
                 if resp['id'] == index:
-                    break
+                    return resp['block']
                 else:
                     try_ctr += 1
                     continue
             except requests.exceptions.ConnectionError:
                 try_ctr += 1
                 continue
-        if try_ctr == ChainFetcher.FAILURE_TOLERANCE:
-            print_log("ChainFetcher", "Fails to fetch #{} from {}".format(index, self.target))
-            return None
-        return resp['block']
+        print_log("ChainFetcher", "Fails to fetch #{} from {}".format(index, self.target))
+        return None
+        
     
     def chain(self):
         try_ctr = 0
@@ -85,14 +83,13 @@ class ChainFetcher:
             try:
                 # print("ChainFetcher", "gonna fetch #{} from {}".format(id, self.target))
                 resp = requests.get(self.target + CONFIG.API_GET_CHAIN_PRINT).json()
-                break
+                return resp['chain']
             except requests.exceptions.ConnectionError:
                 try_ctr += 1
                 continue
-        if try_ctr == ChainFetcher.FAILURE_TOLERANCE:
-            print_log("ChainFetcher", "Fails to fetch chainlist from {}".format(self.target))
-            return None
-        return resp['chain']
+        print_log("ChainFetcher", "Fails to fetch chainlist from {}".format(self.target))
+        return None
+        
 
 
 class Intrpt:
