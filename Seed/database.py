@@ -125,7 +125,7 @@ class RewardDB:
                         fromwhom = miner
                 except requests.exceptions.ConnectionError:
                     print_log("requests", "fails to connect to " + miner)
-            print("longest chain from {} with length".format(fromwhom, current_len))
+            print("longest chain from {} with length {}".format(fromwhom, current_len))
             if longest_chain_fetcher == None:
                 continue
             if current_len > 0:

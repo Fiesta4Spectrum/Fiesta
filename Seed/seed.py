@@ -1,4 +1,6 @@
 import sys
+from werkzeug import serving
+import re
 import os
 import json
 import requests
@@ -237,6 +239,21 @@ def memberList():
         for i in range(myMembers.size):
             print(myMembers.showMember(i))
         time.sleep(5)
+
+
+##### log filter
+
+disabled_endpoints = [CONFIG.API_GET_MINER]
+
+parent_log_request = serving.WSGIRequestHandler.log_request
+
+def log_request(self, *args, **kwargs):
+    if not any(re.match(f"{de}", self.path) for de in disabled_endpoints):
+        parent_log_request(self, *args, **kwargs)
+
+serving.WSGIRequestHandler.log_request = log_request
+
+#####
 
 if __name__ == '__main__':
 

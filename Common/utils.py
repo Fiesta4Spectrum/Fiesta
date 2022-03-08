@@ -1,4 +1,3 @@
-from tkinter.tix import INTEGER
 import requests
 import random
 import os
