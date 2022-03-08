@@ -16,3 +16,18 @@ class Para:
     
     def get_para_dict(self):
         return self.__dict__
+
+def extract_para_from_dict(resp_dict):
+    # extract para from a json
+    para = resp_dict['para']
+    return Para(
+        preproc=para['preprocPara'],
+        train=para['trainPara'],
+        alpha=para['alpha'],
+        difficulty=para['difficulty'],
+        seeder=resp_dict['from'],
+        seed_name=resp_dict['seed_name'],
+        init_weight=resp_dict['seedWeight'],
+        nn_structure=para['layerStructure'],
+        sample_para=para['samplePara']
+    )

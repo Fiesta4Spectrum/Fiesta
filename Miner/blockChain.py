@@ -15,18 +15,20 @@ class Block:
         self.miner = miner
         self.time_stamp = time_stamp
         self.nonce = 0
-        self.difficulty = para.difficulty
-        self.seed_name = para.seed_name         # since every miner has a copy of the full seed parameters in myPara
-                                                # full aggregation parameters is replaced with the seed name, which is shorter
+
 
         # local models
         self.local_list = local_list
         if not template:                        # I propose a new block
+            self.difficulty = para.difficulty
+            self.seed_name = para.seed_name
             self.local_hash = hashValue(local_list) # the replacement for full local list when hashing
             self.new_global = Block.ewma_mix(self.local_list, base_weight, para.alpha, self.index)
         else:
             self.local_hash = None
             self.new_global = None
+            self.difficulty = None
+            self.seed_name = None
 
     
     def get_block_dict(self, shrank, with_hash=True):
@@ -174,6 +176,7 @@ class FileLogger:
 
 class BlockChain:
     def __init__(self, logger):
+        self.lock = Lock()
         self.logger = logger
         self.seed_dir = ""
         self.chain = []
@@ -197,35 +200,57 @@ class BlockChain:
 
 
     def create_genesis_block(self, para):
-        genesis_block = Block([], CONFIG.GENESIS_HASH, 0, 0, para, para.seeder, None)
-        genesis_block.new_global = para.init_weight
-        genesis_block.hash = genesis_block.compute_hash()
-        self.logger.log('NEW CHAIN', 'new chain injected, flush chain, but block file is reserved')
-        self.chain = [self.dumpBlock(genesis_block)]
-        self.file_log('genesis')
-        self.update_chain_print()
+        with self.lock:
+            genesis_block = Block([], CONFIG.GENESIS_HASH, 0, 0, para, para.seeder, None)
+            genesis_block.new_global = para.init_weight
+            genesis_block.hash = genesis_block.compute_hash()
+            self.logger.log('NEW CHAIN', 'new chain injected, flush chain, but block file is reserved')
+            self.chain = [self.dumpBlock(genesis_block)]
+            self.file_log('genesis')
+            self.update_chain_print()
 
     def flush(self):
-        self.chain = []
-        # cleanDir(self.block_dir)
-        self.file_log('flush')
+        with self.lock:
+            self.chain = []
+            # cleanDir(self.block_dir)
+            self.file_log('flush')
     
     def switch(self, new_seed):
         self.seed_dir = new_seed + "/"
         self.logger.switch(new_seed)
         os.makedirs(self.block_dir, exist_ok=True)
 
-    def replace(self, new_chain, rm_base_global = False):
-        self.chain = []
-        # replace only happens when outcoming chain shares the same seed_name with my old chain
-        # no switch is needed
-        for block in new_chain:
-            if rm_base_global:
-                try:
-                    block.delattr('base_global')
-                except:
-                    pass
-            self.chain.append(self.dumpBlock(block))
+    # old implement based on block list
+    # def replace(self, new_chain, rm_base_global = False):
+    #     self.chain = []
+    #     # replace only happens when outcoming chain shares the same seed_name with my old chain
+    #     # no switch is needed
+    #     for block in new_chain:
+    #         if rm_base_global:
+    #             try:
+    #                 block.delattr('base_global')
+    #             except:
+    #                 pass
+    #         self.chain.append(self.dumpBlock(block))
+    #     self.file_log('replace')
+    #     self.update_chain_print()
+
+    # new implement based on fetcher
+    def replace(self, new_fetcher):
+        new_chain = new_fetcher.chain()
+        if new_chain == None:
+            print_log("chain replace", "fails")
+            return
+        for i in range(0, len(new_chain)):
+            if (self.size <= i) or (self.chain[i] != new_chain[i]):
+                break
+        self.chain = self.chain[:i]
+        new_fetcher.set(i)
+        for block in new_fetcher:
+            if not self.valid_then_add(extract_block_from_dict(block), log_enable=False):
+                break
+        print_log("chain replace", "replace chain from #{} - #{}".format(i, len(self.chain) - 1))
+        
         self.file_log('replace')
         self.update_chain_print()
 
@@ -265,23 +290,47 @@ class BlockChain:
     def size(self):
         return len(self.chain)
 
-    def valid_then_add(self, new_block):
-        my_last = self.last_block
-        # continuity check
-        if new_block.prev_hash != my_last.hash:
-            print_log("validate block", "noncontinuous hash link")
-            return False
-        if new_block.index != my_last.index + 1:
-            print_log("validate block", "fails for index mismatch")
-            return False
-        if new_block.hash != new_block.compute_hash():
-            print_log("validate block", "fails for wrong hash")
-            return False
-        # difficulty check
-        if (my_last.difficulty != new_block.difficulty) or (not difficultyCheck(new_block.hash, my_last.difficulty)):
-            print_log("validate block", "fails for difficulty requirement")
-            return False            
-        self.chain.append(self.dumpBlock(new_block))
-        self.file_log('grow')
-        self.update_chain_print()
+    def valid_then_add(self, new_block, log_enable=True):
+        with self.lock:
+            my_last = self.last_block
+            # continuity check
+            if new_block.prev_hash != my_last.hash:
+                print_log("validate block", "noncontinuous hash link, my latest is #{}, received #{}".format(my_last.index, new_block.index))
+                return False
+            if new_block.index != my_last.index + 1:
+                print_log("validate block", "fails for index mismatch, my latest is #{} received #{}".format(my_last.index, new_block.index))
+                return False
+            if new_block.hash != new_block.compute_hash():
+                print_log("validate block", "fails for wrong hash")
+                return False
+            # difficulty check
+            if (my_last.difficulty != new_block.difficulty) or (not difficultyCheck(new_block.hash, my_last.difficulty)):
+                print_log("validate block", "fails for difficulty requirement")
+                return False            
+            self.chain.append(self.dumpBlock(new_block))
+            if log_enable:
+                self.file_log('grow')
+                self.update_chain_print()
         return True
+
+def extract_block_from_dict(resp):
+
+    template = Block(
+        resp['local_list'],
+        resp['prev_hash'],
+        resp['time_stamp'],
+        resp['index'],
+        None,       # myPara as a placeholder here
+        resp['miner'],
+        None,       # base global is none: it is a block from outside, template must be true
+        template=True
+    )
+    template.hash = resp['hash']
+    template.nonce = resp['nonce']
+    template.difficulty = resp['difficulty']
+    template.seed_name = resp['seed_name']
+
+    template.local_hash = resp['local_hash']
+    template.new_global = resp['new_global']
+
+    return template
