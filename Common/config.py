@@ -49,6 +49,7 @@ API_POST_LOCAL = '/new_transaction'
 API_GET_GLOBAL = '/global_model'
 
 API_GET_CHAIN = '/chain'                # full chain
+API_GET_BLOCK = '/block'
 API_GET_CHAIN_SIMPLE = '/chain_simple'  # chain size and last block, for consensus
 API_GET_CHAIN_PRINT = '/chain_print'    # chain for pretty print, not implemented yet
 API_POST_BLOCK = '/add_block'

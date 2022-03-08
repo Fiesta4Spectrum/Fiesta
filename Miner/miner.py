@@ -216,6 +216,17 @@ def get_global():
                 }
     return json.dumps(data)
 
+@miner.route(CONFIG.API_GET_BLOCK, methods=['GET'])
+def get_block():
+    global myChain
+    id = request.args.get('id', default=-1, type=int)
+    if id >= len(myChain.chain):
+        return "Index error", 400
+    required_block = myChain.loadBlock(myChain.chain[id]).get_block_dict(shrank=False)
+    ret = { 'id': id,
+            'block': required_block}
+    return json.dumps(ret)
+
 @miner.route(CONFIG.API_GET_CHAIN, methods=['GET'])
 def get_chain():
     global myChain

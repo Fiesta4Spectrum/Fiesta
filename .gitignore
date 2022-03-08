@@ -136,3 +136,4 @@ Test/res*
 Test/exp_*
 Test/chain_*
 Test/reward_*
+Test/*.txt
