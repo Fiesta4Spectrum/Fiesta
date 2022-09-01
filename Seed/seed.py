@@ -81,6 +81,8 @@ if task_type == "tv":
     SEED = getattr(import_module("DecentSpec.Common.tasks"), "TV_CHANNEL_TASK")
 elif task_type == "anom":
     SEED = getattr(import_module("DecentSpec.Common.tasks"), "ANOMALY_DETECTION_TASK")
+elif task_type == "mtv":
+    SEED = getattr(import_module("DecentSpec.Common.tasks"), "MULTI_TV_CHANNEL_TASK")
 else:
     print("unrecognized task")
     exit()

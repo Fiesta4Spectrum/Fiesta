@@ -30,6 +30,7 @@ usage:
 
 DATA_PARALLEL = 8
 SIMPLE_PRINT = True
+LR_DECAY = 1
 
 myName = genName()
 
@@ -139,8 +140,13 @@ def get_latest(addr_list):
     return data['weight'], data['preprocPara'], data['trainPara'], data['layerStructure']
 
 def push_trained(size, lossDelta, loss, weight, addr_list, index):
-    if lossDelta < 0:
+    global LR_DECAY
+    if CONFIG.AUTO_SUPPRESS and lossDelta < 0:
         return
+    if lossDelta < 0:
+        LR_DECAY = 0.1 # decay the LR in the next round
+    # else:
+    #     LR_DECAY = 1
     MLdata = {
         'stat' : {  'size' : size,
                     'lossDelta' : lossDelta,
@@ -186,7 +192,7 @@ class get_data_set(torch.utils.data.Dataset):
 
 def local_training(model, data, para, layerStructure):
     batch = para['batch']
-    lrate = para['lr']
+    lrate = para['lr'] * LR_DECAY
     epoch = para['epoch']
     lossf = para['loss']
     opt = para['opt']
@@ -201,6 +207,7 @@ def local_training(model, data, para, layerStructure):
 
     avg_loss_begin = 0
     avg_loss_end = 0
+    print("local learning rate decay: {}".format(LR_DECAY))
     for ep in range(epoch):
         loss_sum = 0.0
         for i, data in enumerate(trainLoader, 0):
@@ -271,7 +278,8 @@ def train_mode(train_file):
 
         # data preprocessing setup
         if (layerStructure[-1] == 8):       # tv to multi tv will change the output layer from 1 to 8
-            localFeeder = DataFeeder(train_file, tail_dup = layerStructure[-1] - 1)
+            # localFeeder = DataFeeder(train_file, tail_dup = layerStructure[-1] - 1)
+            localFeeder = DataFeeder(train_file)
         else:
             localFeeder = DataFeeder(train_file)
         localFeeder.setPreProcess(preprocPara)

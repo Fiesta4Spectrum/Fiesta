@@ -131,7 +131,7 @@ dmypy.json
 Test/run_*
 Test/test_*
 Test/log_*
-Dataset/*.dat
+Dataset/
 Test/res*
 Test/exp_*
 Test/chain_*

@@ -24,8 +24,8 @@ class TV_CHANNEL_TASK:
 
 class MULTI_TV_CHANNEL_TASK:
     NAME = "mtv_regression"
-    DIFFICULTY = 3
-    ALPHA = 0.5
+    DIFFICULTY = 1
+    ALPHA = 1
     DEFAULT_NN_STRUCTURE = [2,50,50,50,8]
     SAMPLE_PARA = {
         'center_freq' : 675000000,
