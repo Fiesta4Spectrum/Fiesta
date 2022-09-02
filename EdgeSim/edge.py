@@ -205,10 +205,14 @@ def local_training(model, data, para, layerStructure):
     lossFunc = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr = lrate)
 
+    # avg_loss_begin = local_tester(model, data, para, layerStructure)
+    # print(f"[before epoch]\t[avg loss]\t{avg_loss_begin}")
+
     avg_loss_begin = 0
     cur_avg_loss = 0
     prev_avg_loss = sys.float_info.max
     print("local learning rate decay: {}".format(LR_DECAY))
+    model.train()
     for ep in range(epoch):
         loss_sum = 0.0
         for i, data in enumerate(trainLoader, 0):
@@ -223,7 +227,7 @@ def local_training(model, data, para, layerStructure):
         cur_avg_loss = loss_sum/i
         if ep == 0:
             avg_loss_begin = cur_avg_loss
-        elif prev_avg_loss < cur_avg_loss:
+        if prev_avg_loss < cur_avg_loss:
             break
         prev_avg_loss = cur_avg_loss
 

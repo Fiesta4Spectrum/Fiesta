@@ -24,6 +24,7 @@ POW_ENABLE = True # false will disable the difficulty check which we do not care
 REPRODUCIBILITY = True
 
 # @EDGE_SIM related 
+DROP_OUT = 0
 EDGE_HTTP_INTERVAL = 1     # seconds between two round
 ASYNC_SIM = True            # enable async simulation
 AUTO_SUPPRESS = False

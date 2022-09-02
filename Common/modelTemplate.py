@@ -25,10 +25,11 @@ class FNNModel(nn.Module):
         for i in range(self.hidden_size):
             self.hidden.append(nn.Linear(nlist[i], nlist[i+1]))
         self.ol = nn.Linear(nlist[-2],nlist[-1])   # outputlayer
+        self.dropout = nn.Dropout(CONFIG.DROP_OUT)
     
     # parameter-irrelative operation is recommended as function
     def forward(self, x): # input x is the 2-dimensional spatial coordinates
         for i in range(self.hidden_size):
             x = F.relu(self.hidden[i](x))
-        x = self.ol(x)
+        x = self.ol(self.dropout(x))
         return x
