@@ -10,6 +10,7 @@ import json
 import torch
 from hashlib import sha256
 from threading import Lock
+from math import sin, cos, pi
 
 import DecentSpec.Common.config as CONFIG
 
@@ -191,3 +192,14 @@ def loadBlock_pub(path, file_name):
     with open(path + file_name, "rb") as f:
         my_block = pickle.load(f)
     return my_block
+
+def sincos_encode(inList, L):
+    if L==0:
+        return inList
+    pow2 = 1
+    ret = []
+    for i in range(L):
+        for x in inList:
+            ret += [sin(pow2 * pi * x), cos(pow2 * pi * x)]
+        pow2 *= 2
+    return ret

@@ -27,6 +27,7 @@ REPRODUCIBILITY = True
 EDGE_HTTP_INTERVAL = 1     # seconds between two round
 ASYNC_SIM = True            # enable async simulation
 AUTO_SUPPRESS = False
+POSITIONAL_ENCODE = 10
 
 # @MINER related 
 MINER_REG_INTERVAL = 19

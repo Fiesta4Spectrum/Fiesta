@@ -33,7 +33,7 @@ class MULTI_TV_CHANNEL_TASK:
     }
     PREPROC_PARA = {
         'avg' : [43.073068, -89.431795] + [-84] * 8,
-        'std' : [0.03, 0.05] + [7] * 8,
+        'std' : [0.1, 0.2] + [7] * 8,
     }
     TRAIN_PARA = {
         'batch' : 10,

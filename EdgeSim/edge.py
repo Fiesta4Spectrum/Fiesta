@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from DecentSpec.Common.utils import curTime, print_log, save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
+from DecentSpec.Common.utils import curTime, print_log, save_weights_into_dict, load_weights_from_dict, genName, genTimestamp, sincos_encode
 from DecentSpec.Common.modelTemplate import FNNModel
 import DecentSpec.Common.config as CONFIG
 '''
@@ -183,7 +183,7 @@ class get_data_set(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         row = self.myList[index]
-        input_tensor = torch.tensor(row[:self.inputSize])
+        input_tensor = torch.tensor(sincos_encode(row[:self.inputSize], L=CONFIG.POSITIONAL_ENCODE))
         output_tensor = torch.tensor(row[self.inputSize: self.inputSize + self.outputSize])
         return input_tensor, output_tensor
 
@@ -206,7 +206,8 @@ def local_training(model, data, para, layerStructure):
     optimizer = optim.Adam(model.parameters(), lr = lrate)
 
     avg_loss_begin = 0
-    avg_loss_end = 0
+    cur_avg_loss = 0
+    prev_avg_loss = sys.float_info.max
     print("local learning rate decay: {}".format(LR_DECAY))
     for ep in range(epoch):
         loss_sum = 0.0
@@ -219,12 +220,14 @@ def local_training(model, data, para, layerStructure):
             optimizer.step()
             loss_sum += loss.item()
         print(f"[epoch {ep+1}]\t[avg loss]\t{loss_sum/i}")
+        cur_avg_loss = loss_sum/i
         if ep == 0:
-            avg_loss_begin = loss_sum/i
-        if ep == epoch - 1:
-            avg_loss_end = loss_sum/i
+            avg_loss_begin = cur_avg_loss
+        elif prev_avg_loss < cur_avg_loss:
+            break
+        prev_avg_loss = cur_avg_loss
 
-    return size, avg_loss_begin - avg_loss_end, avg_loss_end, save_weights_into_dict(model)
+    return size, avg_loss_begin - cur_avg_loss, cur_avg_loss, save_weights_into_dict(model)
 
 def local_tester(model, data, para, layerStructure):
     batch = para['batch']
