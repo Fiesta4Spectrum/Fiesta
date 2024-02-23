@@ -1,1 +1,1 @@
-kaggle datasets download -d neutrinoliu/decentspec-datasets
+kaggle datasets download -d neutrinoliu/fiesta
