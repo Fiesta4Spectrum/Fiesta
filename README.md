@@ -7,7 +7,7 @@ pip install --no-cache-dir -r requirements.txt
 
 Download repo:
 ```
-git clone https://github.com/DecentSpec/DecentSpec.git
+git clone https://github.com/Fiesta4Spectrum/Fiesta
 ```
 
 Launch seed node, DecentSpec repo should be inside of the current directory:
