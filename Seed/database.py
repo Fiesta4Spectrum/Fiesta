@@ -11,8 +11,8 @@ import requests
 import pickle
 import os
 
-import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import ChainFetcher, genPickleName, genName, print_log
+import Fiesta.Common.config as CONFIG
+from Fiesta.Common.utils import ChainFetcher, genPickleName, genName, print_log
 
 class MinerDB:
     def __init__(self):

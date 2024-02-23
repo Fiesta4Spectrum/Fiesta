@@ -1,8 +1,8 @@
 from threading import Lock
 import json
-from DecentSpec.Common.utils import print_log
-import DecentSpec.Common.config as CONFIG
-from DecentSpec.Miner.blockChain import FileLogger
+from Fiesta.Common.utils import print_log
+import Fiesta.Common.config as CONFIG
+from Fiesta.Miner.blockChain import FileLogger
 
 # local model pool
 # unamed version

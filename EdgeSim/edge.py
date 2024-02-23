@@ -7,12 +7,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from DecentSpec.Common.utils import curTime, print_log, save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
-from DecentSpec.Common.modelTemplate import FNNModel
-import DecentSpec.Common.config as CONFIG
+from Fiesta.Common.utils import curTime, print_log, save_weights_into_dict, load_weights_from_dict, genName, genTimestamp
+from Fiesta.Common.modelTemplate import FNNModel
+import Fiesta.Common.config as CONFIG
 '''
 usage:
-    python -m DecentSpec.EdgeSim.edge {0} {1} {2} {3} {4} {opt-5}
+    python -m Fiesta.EdgeSim.edge {0} {1} {2} {3} {4} {opt-5}
     {0} - seed node address
     {1} - mode: test or training
     {2} - file path (train or test)
@@ -333,7 +333,7 @@ def test_mode(test_file):
         print_loss(loss)
 
 def print_loss(loss):
-    output_path = "DecentSpec/Test/test_loss_{}.txt".format(myName)
+    output_path = "Fiesta/Test/test_loss_{}.txt".format(myName)
     with open(output_path, "a+") as f:
         if SIMPLE_PRINT:
             f.write("{}\n".format(loss))

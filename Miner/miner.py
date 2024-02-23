@@ -9,18 +9,18 @@ import json
 import time
 from flask import Flask, request
 
-import DecentSpec.Common.config as CONFIG
-from DecentSpec.Common.utils import ChainFetcher, difficultyCheck, genName, genPickleName, genTimestamp, hashValue, print_log, Intrpt, safe_dump
-from DecentSpec.Miner.asyncPost import AsyncPost
-from DecentSpec.Miner.blockChain import Block, BlockChain, ChainState, FileLogger, extract_block_from_dict
-from DecentSpec.Miner.pool import Pool
-from DecentSpec.Miner.para import Para, extract_para_from_dict
+import Fiesta.Common.config as CONFIG
+from Fiesta.Common.utils import ChainFetcher, difficultyCheck, genName, genPickleName, genTimestamp, hashValue, print_log, Intrpt, safe_dump
+from Fiesta.Miner.asyncPost import AsyncPost
+from Fiesta.Miner.blockChain import Block, BlockChain, ChainState, FileLogger, extract_block_from_dict
+from Fiesta.Miner.pool import Pool
+from Fiesta.Miner.para import Para, extract_para_from_dict
 
 # local field init ========================
 
 '''
 usage:
-    python -m DecentSpec.Miner.miner {0} {1} {2} {3} {4} {opt-5}
+    python -m Fiesta.Miner.miner {0} {1} {2} {3} {4} {opt-5}
     {0} - seed node address with port
     {1} - ip or domain with http
     {2} - port 

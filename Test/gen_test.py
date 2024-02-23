@@ -40,19 +40,19 @@ def genShell(tag):
 
     shell_file = open("run_test_{}.sh".format(test_id), "w")
     shell_file.write("cd ../..\n")
-    shell_file.write("xterm -T seednode -e python3 -m DecentSpec.Seed.seed {} 5000 &\n".format(task))
+    shell_file.write("xterm -T seednode -e python3 -m Fiesta.Seed.seed {} 5000 &\n".format(task))
     shell_file.write("sleep 1\n")
     for i in range(0, miner_num):
-        shell_file.write("xterm -T miner{} -e python3 -m DecentSpec.Miner.miner {} {} {} {} {} &\n".format(i, CONFIG.SEED_ADDR, MY_IP, 8000+i, block_size_min, block_size_max))
+        shell_file.write("xterm -T miner{} -e python3 -m Fiesta.Miner.miner {} {} {} {} {} &\n".format(i, CONFIG.SEED_ADDR, MY_IP, 8000+i, block_size_min, block_size_max))
     shell_file.write("sleep 1\n")
 
     for i in range(0, edge_num):
-        train_file_path = "DecentSpec/Test/{}/train_{}.dat".format(dataset_path, i)
-        shell_file.write("xterm -T edge{} -e python3 -m DecentSpec.EdgeSim.edge train {} {} {} {} &\n".format(i, CONFIG.SEED_ADDR, train_file_path, 0, round))         #  size zero refers to full set
+        train_file_path = "Fiesta/Test/{}/train_{}.dat".format(dataset_path, i)
+        shell_file.write("xterm -T edge{} -e python3 -m Fiesta.EdgeSim.edge train {} {} {} {} &\n".format(i, CONFIG.SEED_ADDR, train_file_path, 0, round))         #  size zero refers to full set
 
-    test_file_path = "DecentSpec/Test/{}/test.dat".format(dataset_path)
-    shell_file.write("xterm -T loss_tester -e python3 -m DecentSpec.EdgeSim.edge test {} {} {} {} &\n".format(CONFIG.SEED_ADDR, test_file_path, 0, 0))            #  size zero refers to full set
-    shell_file.write("cd DecentSpec/Test\n")
+    test_file_path = "Fiesta/Test/{}/test.dat".format(dataset_path)
+    shell_file.write("xterm -T loss_tester -e python3 -m Fiesta.EdgeSim.edge test {} {} {} {} &\n".format(CONFIG.SEED_ADDR, test_file_path, 0, 0))            #  size zero refers to full set
+    shell_file.write("cd Fiesta/Test\n")
     shell_file.close()
     print("- done, plz run 'source run_test_{}.sh' ".format(test_id))
 

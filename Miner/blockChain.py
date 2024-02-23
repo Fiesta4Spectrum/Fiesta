@@ -2,8 +2,8 @@ from copyreg import pickle
 from threading import Lock, local
 import os
 from copy import deepcopy
-from DecentSpec.Common.utils import *
-import DecentSpec.Common.config as CONFIG
+from Fiesta.Common.utils import *
+import Fiesta.Common.config as CONFIG
 
 class Block:
 

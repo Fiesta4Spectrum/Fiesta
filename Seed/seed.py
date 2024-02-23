@@ -10,26 +10,26 @@ from flask import Flask, request
 import threading
 from importlib import import_module
 
-from DecentSpec.Seed.database import MinerDB, RewardDB
-from DecentSpec.Common.modelTemplate import FNNModel 
-from DecentSpec.Common.utils import genPickleName, load_weights_from_dict, print_log, safe_dump, save_weights_into_dict, genName, tensor2dict
-import DecentSpec.Common.config as CONFIG
+from Fiesta.Seed.database import MinerDB, RewardDB
+from Fiesta.Common.modelTemplate import FNNModel 
+from Fiesta.Common.utils import genPickleName, load_weights_from_dict, print_log, safe_dump, save_weights_into_dict, genName, tensor2dict
+import Fiesta.Common.config as CONFIG
 
-# from DecentSpec.Common.tasks import TV_CHANNEL_TASK as SEED
-# from DecentSpec.Common.tasks import ANOMALY_DETECTION_TASK as SEED
+# from Fiesta.Common.tasks import TV_CHANNEL_TASK as SEED
+# from Fiesta.Common.tasks import ANOMALY_DETECTION_TASK as SEED
 
 '''
 usage:
-    python -m DecentSpec.Seed.seed {1} {2} 
+    python -m Fiesta.Seed.seed {1} {2} 
     {1} - task type:
             "tv"    : tv channel regression
             "anom"  : anomaly detection
     {2} - int, port number
 
-    python -m DecentSpec.Seed.seed {1}
+    python -m Fiesta.Seed.seed {1}
     {1} - pickle file of states
 
-    python -m DecentSpec.Seed.seed {1} {2} {3}
+    python -m Fiesta.Seed.seed {1} {2} {3}
     {1} - task type:
             "tv"    : tv channel regression
             "anom"  : anomaly detection
@@ -78,11 +78,11 @@ else:
     exit()
 
 if task_type == "tv":   
-    SEED = getattr(import_module("DecentSpec.Common.tasks"), "TV_CHANNEL_TASK")
+    SEED = getattr(import_module("Fiesta.Common.tasks"), "TV_CHANNEL_TASK")
 elif task_type == "anom":
-    SEED = getattr(import_module("DecentSpec.Common.tasks"), "ANOMALY_DETECTION_TASK")
+    SEED = getattr(import_module("Fiesta.Common.tasks"), "ANOMALY_DETECTION_TASK")
 elif task_type == "mtv":
-    SEED = getattr(import_module("DecentSpec.Common.tasks"), "MULTI_TV_CHANNEL_TASK")
+    SEED = getattr(import_module("Fiesta.Common.tasks"), "MULTI_TV_CHANNEL_TASK")
 else:
     print("unrecognized task")
     exit()
@@ -202,7 +202,7 @@ def flush():
     global SEED
     global myName
 
-    SEED = getattr(import_module("DecentSpec.Common.tasks"), "MULTI_TV_CHANNEL_TASK")
+    SEED = getattr(import_module("Fiesta.Common.tasks"), "MULTI_TV_CHANNEL_TASK")
 
     layerStructure = SEED.DEFAULT_NN_STRUCTURE
 

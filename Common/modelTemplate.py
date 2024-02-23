@@ -6,7 +6,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import DecentSpec.Common.config as CONFIG
+import Fiesta.Common.config as CONFIG
 
 if CONFIG.REPRODUCIBILITY:
     torch.manual_seed(3407) # magic number

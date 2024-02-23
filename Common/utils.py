@@ -11,7 +11,7 @@ import torch
 from hashlib import sha256
 from threading import Lock
 
-import DecentSpec.Common.config as CONFIG
+import Fiesta.Common.config as CONFIG
 
 class ChainFetcher:
     FAILURE_TOLERANCE = 10
